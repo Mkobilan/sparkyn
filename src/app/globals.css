@@ -109,7 +109,7 @@ body {
 }
 
 /* Typography */
-h1, h2, h3, h4, h5, h6 {
+h1, h2, h3, h4, h5, h6, .font-heading {
   font-family: 'Space Grotesk', 'Inter', sans-serif;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -308,6 +308,101 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Selection */
+/* Sidebar Bespoke Styles */
+.nav-sidebar {
+  width: 280px;
+  height: calc(100vh - 2rem);
+  margin: 1rem;
+  border-radius: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+}
+
+.nav-link:hover {
+  color: hsl(var(--foreground));
+  background: hsla(var(--primary), 0.08);
+  border-color: hsla(var(--primary), 0.15);
+}
+
+.nav-link.active {
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary));
+  box-shadow: 0 8px 20px -6px hsla(var(--primary), 0.5);
+  border-color: hsla(var(--primary), 0.2);
+}
+
+.nav-link.active svg {
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.4));
+}
+
+/* Sidebar Icons Wrapper */
+.nav-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.6rem;
+  background: hsla(0, 0%, 100%, 0.03);
+  border: 1px solid hsla(0, 0%, 100%, 0.05);
+  transition: inherit;
+}
+
+.nav-link:hover .nav-icon {
+  background: hsla(var(--primary), 0.15);
+  border-color: hsla(var(--primary), 0.2);
+  transform: scale(1.05);
+}
+
+/* Menu Category Label */
+.menu-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: hsl(var(--muted-foreground));
+  padding: 1.5rem 1.25rem 0.5rem;
+  opacity: 0.6;
+}
+
+/* User Profile Mini Card */
+.user-card {
+  margin: 1rem;
+  padding: 1rem;
+  border-radius: 1.25rem;
+  background: hsla(0, 0%, 100%, 0.03);
+  border: 1px solid hsla(0, 0%, 100%, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Animation Utilities */
+.hover-glow:hover {
+  box-shadow: 0 0 20px -5px hsla(var(--primary), 0.4);
+}
+
 ::selection {
   background: hsla(var(--primary), 0.3);
   color: hsl(var(--foreground));

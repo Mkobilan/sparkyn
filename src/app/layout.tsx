@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Sparkyn | AI Social Media Automation",
   description: "Automate your social media presence with AI-powered content generation and scheduling.",
+  icons: {
+    icon: "/sparkyn_icon.jpg",
+  },
 };
 
 export default function RootLayout({

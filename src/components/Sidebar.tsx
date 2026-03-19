@@ -10,9 +10,12 @@ import {
   HelpCircle, 
   LogOut,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  User,
+  Zap
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-browser'
+import { useEffect, useState } from 'react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -26,6 +29,15 @@ export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+    }
+    getUser()
+  }, [supabase])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -33,51 +45,71 @@ export default function Sidebar() {
   }
 
   return (
-    <div className="w-64 glass min-h-screen border-r border-border flex flex-col fixed left-0 top-0 z-40 bg-card/50">
-      <div className="p-6 flex items-center gap-3">
-        <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
-          <Sparkles className="text-primary w-6 h-6" />
+    <aside className="nav-sidebar glass grain">
+      {/* Branding */}
+      <div className="p-7 flex items-center gap-3.5">
+        <img src="/sparkyn_logo.jpg" alt="Sparkyn Logo" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: '0.75rem', border: '1px solid hsla(36,95%,55%,0.2)' }} />
+        <div className="flex flex-col">
+          <span className="text-xl font-extrabold font-heading tracking-tight" style={{ color: 'white' }}>Sparkyn</span>
+          <span className="text-[10px] uppercase font-heavy tracking-[0.2em] text-primary opacity-80">Creator Engine</span>
         </div>
-        <span className="text-xl font-bold tracking-tight font-heading">Sparkyn</span>
       </div>
 
-      <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
-        <div className="px-3 mb-2">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Menu</p>
-        </div>
+      {/* Navigation */}
+      <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto">
+        <div className="menu-label">Main Experience</div>
         {navigation.map((item) => {
           const isActive = pathname === item.href
           return (
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-all group ${
-                isActive 
-                  ? 'bg-primary/10 text-primary border border-primary/20 shadow-lg shadow-primary/5' 
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground border border-transparent'
-              }`}
+              className={`nav-link ${isActive ? 'active' : ''}`}
             >
-              <div className="flex items-center gap-3">
-                <item.icon className={`w-[18px] h-[18px] transition-colors ${isActive ? 'text-primary' : 'group-hover:text-foreground'}`} />
-                <span className="text-sm">{item.name}</span>
+              <div className="nav-icon">
+                <item.icon className="w-[18px] h-[18px]" />
               </div>
-              {isActive && <div className="w-1 h-1 rounded-full bg-primary" />}
+              <span className="flex-1">{item.name}</span>
+              {isActive && (
+                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              )}
             </Link>
           )
         })}
+        
+        <div className="menu-label">Insights</div>
+        <Link href="/dashboard" className="nav-link opacity-60 pointer-events-none">
+          <div className="nav-icon">
+            <Zap className="w-[18px] h-[18px]" />
+          </div>
+          <span className="flex-1">AI Analytics</span>
+          <div className="badge border-primary/20 bg-primary/10 text-primary text-[8px] scale-75">Pro</div>
+        </Link>
       </nav>
 
-      <div className="p-4 mt-auto border-t border-border/50">
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg font-medium transition-all text-sm group"
-        >
-          <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
-            <LogOut className="w-4 h-4" />
+      {/* Footer / User */}
+      <div className="mt-auto border-t border-white/5 pt-4 pb-4">
+        <div className="user-card mx-4 mb-4">
+          <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center border border-white/10">
+            <User className="w-5 h-5 text-muted-foreground" />
           </div>
-          <span>Sign Out</span>
-        </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold truncate">{user?.email?.split('@')[0] || 'Creator'}</p>
+            <p className="text-[9px] text-muted-foreground truncate uppercase tracking-widest font-heavy">Free Tier</p>
+          </div>
+          <Zap className="w-3.5 h-3.5 text-primary animate-pulse" />
+        </div>
+        
+        <div className="px-4">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-4 py-3 text-muted-foreground hover:text-destructive transition-all text-xs font-bold uppercase tracking-widest group"
+          >
+            <LogOut className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </aside>
   )
 }

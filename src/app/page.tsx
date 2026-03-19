@@ -7,11 +7,9 @@ export default function Home() {
       {/* ── HEADER ── */}
       <header style={{ position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: '1px solid hsla(0,0%,100%,0.06)', background: 'hsla(0,0%,4%,0.75)' }}>
         <nav className="container flex items-center justify-between" style={{ padding: '1rem 1.5rem' }}>
-          <Link href="/" className="flex items-center gap-2" style={{ textDecoration: 'none' }}>
-            <div style={{ padding: '0.4rem', background: 'hsla(36,95%,55%,0.15)', borderRadius: '0.6rem' }}>
-              <Sparkles style={{ width: 22, height: 22, color: 'hsl(36,95%,55%)' }} />
-            </div>
-            <span style={{ fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.04em', fontFamily: "'Space Grotesk', sans-serif" }}>Sparkyn</span>
+          <Link href="/" className="flex items-center gap-3" style={{ textDecoration: 'none' }}>
+            <img src="/sparkyn_logo.jpg" alt="Sparkyn Logo" style={{ height: 32, width: 'auto', borderRadius: '4px' }} />
+            <span style={{ fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.04em', fontFamily: "'Space Grotesk', sans-serif", color: 'white' }}>Sparkyn</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/login" className="btn btn-ghost" style={{ fontSize: '0.85rem' }}>Log in</Link>
@@ -132,9 +130,9 @@ export default function Home() {
       {/* ── FOOTER ── */}
       <footer style={{ borderTop: '1px solid hsl(0,0%,10%)', padding: '2.5rem 0', marginTop: '2rem' }}>
         <div className="container flex items-center justify-between" style={{ flexWrap: 'wrap', gap: '1rem' }}>
-          <div className="flex items-center gap-2">
-            <Sparkles style={{ width: 16, height: 16, color: 'hsl(36,95%,55%)' }} />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif" }}>Sparkyn</span>
+          <div className="flex items-center gap-3">
+            <img src="/sparkyn_logo.jpg" alt="Sparkyn" style={{ height: 24, borderRadius: '2px' }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", color: 'white' }}>Sparkyn</span>
             <span style={{ fontSize: '0.75rem', color: 'hsl(0,0%,40%)' }}>© 2026</span>
           </div>
           <div className="flex items-center gap-6">
