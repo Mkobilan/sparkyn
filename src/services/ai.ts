@@ -81,11 +81,10 @@ export const aiService = {
         return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
       }
       
-      console.warn("Nano Banana didn't return inlineData, falling back to placeholder.");
-      return "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop";
+      throw new Error(`Nano Banana failed to return image data. Response structure: ${JSON.stringify(result.response)}`);
     } catch (error: any) {
       console.error("Image generation (Nano Banana) failed:", error.message);
-      return "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop";
+      throw new Error(`Image Gen Error: ${error.message}`);
     }
   }
 };
