@@ -53,16 +53,16 @@ export const aiService = {
     }
 
     try {
-      return await tryGenerate("gemini-1.5-flash-latest");
+      return await tryGenerate("gemini-2.5-flash");
     } catch (e: any) {
-      console.warn(`Fallback: gemini-1.5-flash-latest failed: ${e.message}`);
+      console.warn(`Fallback: gemini-2.5-flash failed: ${e.message}`);
       try {
-        return await tryGenerate("gemini-1.5-pro-latest");
+        return await tryGenerate("gemini-flash-latest");
       } catch (e2: any) {
-        console.warn(`Fallback: gemini-1.5-pro-latest failed: ${e2.message}`);
+        console.warn(`Fallback: gemini-flash-latest failed: ${e2.message}`);
         try {
           // Last resort fallback without JSON mime type enforcement, manual parsing
-          const fallbackModel = genAI.getGenerativeModel({ model: "gemini-pro" });
+          const fallbackModel = genAI.getGenerativeModel({ model: "gemini-pro-latest" });
           const result = await fallbackModel.generateContent(prompt + "\n\nRETURN ONLY VALID JSON. NO MARKDOWN BACKTICKS.");
           let text = result.response.text().trim();
           if (text.startsWith("```json")) text = text.replace(/```json/g, "").replace(/```/g, "").trim();
