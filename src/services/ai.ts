@@ -84,7 +84,15 @@ export const aiService = {
       throw new Error(`Nano Banana failed to return image data. Response structure: ${JSON.stringify(result.response)}`);
     } catch (error: any) {
       console.error("Image generation (Nano Banana) failed:", error.message);
-      throw new Error(`Image Gen Error: ${error.message}`);
+      
+      // Since Google's free tier sets the Nano Banana image quota to 0, we fallback to a free public AI image generator!
+      const seed = Math.floor(Math.random() * 100000);
+      const safePrompt = `Professional social media photography, no text, clean composition: ${description}. ${content}`.slice(0, 800);
+      const encodedPrompt = encodeURIComponent(safePrompt);
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=1024&height=1024&nologo=true`;
+      
+      console.log("Using Pollinations.ai fallback:", pollinationsUrl);
+      return pollinationsUrl;
     }
   }
 };
