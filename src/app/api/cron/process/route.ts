@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // 2. Fetch all users whose onboarding is complete
     const { data: users, error: userError } = await supabase
