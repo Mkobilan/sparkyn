@@ -12,6 +12,8 @@ export async function GET(
 
   if (platform === 'facebook' || platform === 'instagram') {
     // Meta OAuth
+    // Note: Some permissions require App Review or Advanced Access.
+    // We'll use the most common ones for social media management.
     const scopes = [
       'public_profile',
       'email',
@@ -22,7 +24,7 @@ export async function GET(
       'instagram_content_publish',
     ].join(',')
     
-    authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&response_type=code`
+    authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${process.env.META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code`
   } else if (platform === 'tiktok') {
     // TikTok OAuth
     // Using the scopes mentioned in tiktok_submission.md

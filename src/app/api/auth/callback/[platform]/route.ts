@@ -26,14 +26,20 @@ export async function GET(
     let tokenData: any = {}
     
     if (platform === 'facebook' || platform === 'instagram') {
-      const resp = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?client_id=${process.env.META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${process.env.META_APP_SECRET}&code=${code}`)
+      const resp = await fetch(`https://graph.facebook.com/v21.0/oauth/access_token?client_id=${process.env.META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${process.env.META_APP_SECRET}&code=${code}`)
       tokenData = await resp.json()
       
-      if (tokenData.error) throw new Error(tokenData.error.message)
+      if (tokenData.error) {
+        console.error('Meta Token Error:', tokenData.error)
+        throw new Error(tokenData.error.message || 'Meta token exchange failed')
+      }
       
-      // ForMeta, we might want to exchange for a long-lived token
-      const longLivedResp = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.META_APP_ID}&client_secret=${process.env.META_APP_SECRET}&fb_exchange_token=${tokenData.access_token}`)
-      tokenData = await longLivedResp.json()
+      // For Meta, we might want to exchange for a long-lived token
+      const longLivedResp = await fetch(`https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.META_APP_ID}&client_secret=${process.env.META_APP_SECRET}&fb_exchange_token=${tokenData.access_token}`)
+      const longLivedData = await longLivedResp.json()
+      if (!longLivedData.error) {
+        tokenData = longLivedData
+      }
     } else if (platform === 'tiktok') {
       const resp = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
         method: 'POST',
