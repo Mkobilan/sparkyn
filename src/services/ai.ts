@@ -66,15 +66,26 @@ export const aiService = {
     }
   },
 
-  /**
-   * Generates a marketing image prompt and then the image (simulated for now as dual-step or direct)
-   * Note: Project IDX uses Gemini 2.5 Flash for image generation mentioned in prompt.
-   */
   async generateImage(description: string, content: string) {
-    // Current SDK might differ for Image generation (Imagen vs Gemini 2.5 Flash)
-    // For now, providing the structure to call the appropriate model
-    console.log("Generating image with description:", description);
-    // Placeholder for image generation logic
-    return "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop"; // Placeholder
+    try {
+      console.log("Requesting Nano Banana image for:", description);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image" });
+      const imagePrompt = `Professional social media marketing photography for: ${description}. Context: ${content}. NO TEXT ON IMAGE. Clean, high quality, cinematic lighting, engaging composition.`;
+      
+      const result = await model.generateContent(imagePrompt);
+      
+      // Try to parse Base64 inlineData (typical for Gemini Image endpoints)
+      const part = result.response.candidates?.[0]?.content?.parts?.[0];
+      if (part && part.inlineData) {
+        console.log("Successfully generated image via Nano Banana!");
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      }
+      
+      console.warn("Nano Banana didn't return inlineData, falling back to placeholder.");
+      return "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop";
+    } catch (error: any) {
+      console.error("Image generation (Nano Banana) failed:", error.message);
+      return "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop";
+    }
   }
 };

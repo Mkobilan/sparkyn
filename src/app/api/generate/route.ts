@@ -48,11 +48,11 @@ export async function POST(request: Request) {
       console.log(`Generating content for ${account.platform} (${account.platform_name})...`)
       try {
         const content = await aiService.generateContent({
-          businessName: profile.business_name,
-          industry: profile.industry,
-          niche: profile.niche_description,
-          description: profile.business_description,
-          goal: profile.primary_goal,
+          businessName: account.metadata?.business_name || profile.business_name,
+          industry: account.metadata?.industry || profile.industry,
+          niche: account.metadata?.niche || profile.niche_description,
+          description: account.metadata?.description || profile.business_description,
+          goal: account.metadata?.goal || profile.primary_goal,
           tone: account.content_strategy || profile.content_tone, // Use account specific strategy
           postsPerDay: profile.posts_per_day,
           platform: account.platform as any,

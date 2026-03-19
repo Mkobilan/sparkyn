@@ -22,6 +22,8 @@ export default function InstagramDashboard() {
   const [loading, setLoading] = useState(true)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [scheduledTimes, setScheduledTimes] = useState<Record<string, string>>({})
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ business_name: '', industry: '', niche: '', description: '', goal: '' })
   const supabase = createClient()
 
   const fetchAccounts = async () => {
@@ -77,6 +79,37 @@ export default function InstagramDashboard() {
     } else {
       console.error('Update Strategy Error:', error)
       alert(`Failed to update strategy: ${error.message}`)
+    }
+  }
+
+  const handleEditClick = (account: any) => {
+    if (editingId === account.id) {
+      setEditingId(null)
+    } else {
+      setEditingId(account.id)
+      setEditForm({
+        business_name: account.metadata?.business_name || '',
+        industry: account.metadata?.industry || '',
+        niche: account.metadata?.niche || '',
+        description: account.metadata?.description || '',
+        goal: account.metadata?.goal || ''
+      })
+    }
+  }
+
+  const saveSettings = async (accountId: string, currentMetadata: any) => {
+    const newMetadata = { ...currentMetadata, ...editForm }
+    const { error } = await supabase
+      .from('social_accounts')
+      .update({ metadata: newMetadata })
+      .eq('id', accountId)
+      
+    if (!error) {
+      setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, metadata: newMetadata } : a))
+      setEditingId(null)
+      alert('Account settings saved!')
+    } else {
+      alert(`Failed to save settings: ${error.message}`)
     }
   }
 
@@ -181,10 +214,43 @@ export default function InstagramDashboard() {
                   >
                     Schedule AI
                   </button>
-                  <button className="btn btn-ghost w-14 h-14 p-0 rounded-xl border border-border/50">
-                    <Settings2 className="w-5 h-5 text-muted-foreground" />
+                  <button onClick={() => handleEditClick(account)} className={`btn w-14 h-14 p-0 rounded-xl border ${editingId === account.id ? 'bg-[#E4405F]/10 border-[#E4405F] text-[#E4405F]' : 'btn-ghost border-border/50 text-muted-foreground'}`}>
+                    <Settings2 className="w-5 h-5 cursor-pointer" />
                   </button>
                 </div>
+
+                {editingId === account.id && (
+                  <div className="mt-6 p-6 border border-border/50 rounded-2xl bg-muted/20 space-y-4">
+                    <h4 className="font-extrabold text-sm uppercase tracking-widest text-muted-foreground mb-4">Account-Specific Overrides</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#E4405F]">Business Name</label>
+                        <input value={editForm.business_name} onChange={e => setEditForm({...editForm, business_name: e.target.value})} placeholder="Override global name..." className="w-full bg-background border-border/50 rounded-xl px-4 py-3 text-sm font-medium" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#E4405F]">Industry</label>
+                        <input value={editForm.industry} onChange={e => setEditForm({...editForm, industry: e.target.value})} placeholder="e.g. Local Bakery" className="w-full bg-background border-border/50 rounded-xl px-4 py-3 text-sm font-medium" />
+                      </div>
+                      <div className="space-y-1.5 col-span-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#E4405F]">Niche / Target Audience</label>
+                        <input value={editForm.niche} onChange={e => setEditForm({...editForm, niche: e.target.value})} placeholder="e.g. Gluten-free enthusiasts" className="w-full bg-background border-border/50 rounded-xl px-4 py-3 text-sm font-medium" />
+                      </div>
+                      <div className="space-y-1.5 col-span-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#E4405F]">Profile Description / Services</label>
+                        <textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} placeholder="Describe what this specific profile promotes..." className="w-full bg-background border-border/50 rounded-xl px-4 py-3 text-sm font-medium h-24 resize-none" />
+                      </div>
+                      <div className="space-y-1.5 col-span-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#E4405F]">Goal</label>
+                        <input value={editForm.goal} onChange={e => setEditForm({...editForm, goal: e.target.value})} placeholder="e.g. Drive wedding cake unquiries" className="w-full bg-background border-border/50 rounded-xl px-4 py-3 text-sm font-medium" />
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-4">
+                      <button onClick={() => saveSettings(account.id, account.metadata)} className="btn btn-primary font-bold px-8 py-3 rounded-xl shadow-lg">
+                        Save Account Settings
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
 
