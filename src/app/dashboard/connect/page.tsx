@@ -47,53 +47,59 @@ export default function ConnectAccountsPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 ml-64 p-8 max-w-4xl space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold">Connect Accounts</h1>
-          <p className="text-muted-foreground mt-1">Link your social media profiles to start automating.</p>
-        </div>
-
-        <div className="glass card bg-primary/5 border-primary/20 flex items-start gap-4 p-6">
-          <div className="p-3 bg-primary/20 rounded-xl">
-            <ShieldCheck className="text-primary w-6 h-6" />
-          </div>
+      
+      <main className="main-content bg-gradient relative">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+        
+        <div className="max-w-4xl space-y-8">
           <div>
-            <h3 className="font-bold">Secure Connection</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              We use official APIs for all connections. Your passwords are never stored, and you can revoke access at any time.
-            </p>
+            <h1 className="text-4xl font-black font-heading tracking-tight text-white mb-2">Connect Accounts</h1>
+            <p className="text-muted-foreground">Link your social media profiles to ignite the Sparkyn engine.</p>
+          </div>
+
+          <div className="glass p-6 rounded-[2rem] border border-primary/20 bg-primary/5 flex items-start gap-4 animate-fade-in-up">
+            <div className="p-3 bg-primary/20 rounded-xl border border-primary/30">
+              <ShieldCheck className="text-primary w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold">Secure Connection</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                We use official APIs for all connections. Your passwords are never stored, and you can revoke access at any time.
+              </p>
+            </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {platforms.map((platform) => (
-            <div key={platform.id} className="glass card space-y-6">
+            <div key={platform.id} className="glass p-8 rounded-[2rem] border border-border/50 space-y-6 hover:border-primary/30 transition-all hover-glow group">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-background border border-border rounded-xl">
-                    <platform.icon className="w-8 h-8" style={{ color: platform.color }} />
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-background border border-border rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <platform.icon className="w-8 h-8" style={{ color: platform.id === 'tiktok' || platform.id === 'youtube' ? 'hsl(var(--primary))' : platform.color }} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">{platform.name}</h3>
-                    <p className="text-xs text-muted-foreground">Official API Integration</p>
+                    <h3 className="font-bold text-xl text-white font-heading">{platform.name}</h3>
+                    <p className="text-[10px] uppercase font-heavy tracking-widest text-muted-foreground">Official API Integration</p>
                   </div>
                 </div>
                 {isConnected(platform.id) && (
-                  <CheckCircle2 className="text-green-500 w-6 h-6" />
+                  <CheckCircle2 className="text-success w-6 h-6 animate-pulse" />
                 )}
               </div>
 
               {isConnected(platform.id) ? (
                 <div className="space-y-4">
-                  <div className="p-3 rounded-lg bg-green-500/10 text-green-500 text-sm font-medium flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" /> Connected as @{profile.business_name.toLowerCase().replace(' ', '')}
+                  <div className="p-4 rounded-xl bg-success/10 border border-success/20 text-success text-sm font-bold flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                    Connected as @{profile.business_name.toLowerCase().replace(/\s+/g, '')}
                   </div>
-                  <button className="btn btn-secondary w-full text-destructive hover:bg-destructive/10 border-destructive/10">
+                  <button className="btn btn-ghost w-full text-destructive hover:bg-destructive/10 border border-destructive/10 text-xs font-bold uppercase tracking-widest">
                     Disconnect Account
                   </button>
                 </div>
               ) : (
-                <button className="btn btn-primary w-full gap-2">
+                <button className="btn btn-primary w-full gap-2 py-4 rounded-xl shadow-[0_8px_20px_-6px_hsla(var(--primary),0.4)]">
                   <Plus className="w-4 h-4" /> Connect {platform.name}
                 </button>
               )}
