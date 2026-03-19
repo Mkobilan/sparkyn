@@ -10,18 +10,22 @@ import {
   Calendar,
   Layers,
   BarChart3,
-  ExternalLink,
   ChevronRight,
   Loader2,
-  Sparkles
+  Sparkles,
+  Zap,
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
   const [queue, setQueue] = useState<any[]>([])
-  const [recentPosts, setRecentPosts] = useState<any[]>([])
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
+  const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
@@ -38,23 +42,26 @@ export default function DashboardPage() {
       
       setProfile(profileData)
 
-      // Dummy data for now (will be replaced by AI integration later)
-      setQueue([
-        { 
-          id: '1', 
-          platforms: ['facebook', 'instagram'], 
-          caption: "Unlock the power of automation with Sparkyn!", 
-          scheduled_at: new Date(Date.now() + 86400000).toISOString(),
-          image_url: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=400&auto=format&fit=crop"
-        },
-        { 
-          id: '2', 
-          platforms: ['tiktok'], 
-          caption: "How we scaled our SaaS in 30 days. No fluff.", 
-          scheduled_at: new Date(Date.now() + 172800000).toISOString(),
-          image_url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=400&auto=format&fit=crop"
-        }
-      ])
+      // Fetch real queue data
+      const { data: queueData } = await supabase
+        .from('scheduled_posts')
+        .select('*')
+        .eq('status', 'scheduled')
+        .order('scheduled_at', { ascending: true })
+        .limit(3)
+      
+      setQueue(queueData || [])
+
+      // Fetch real recent activity (published or failed posts)
+      const { data: activityData } = await supabase
+        .from('scheduled_posts')
+        .select('*')
+        .neq('status', 'scheduled')
+        .order('updated_at', { ascending: false })
+        .limit(4)
+      
+      setRecentActivity(activityData || [])
+      setLoading(false)
     }
 
     fetchData()
@@ -66,12 +73,13 @@ export default function DashboardPage() {
       const response = await fetch('/api/generate', { method: 'POST' })
       const data = await response.json()
       if (data.success) {
-        // Refresh queue
+        // Refresh data
         const { data: queueData } = await supabase
           .from('scheduled_posts')
           .select('*')
           .eq('status', 'scheduled')
           .order('scheduled_at', { ascending: true })
+          .limit(3)
         setQueue(queueData || [])
       }
     } catch (error) {
@@ -82,42 +90,54 @@ export default function DashboardPage() {
   }
 
   const stats = [
-    { name: 'Published Today', value: '0', icon: CheckCircle2, color: 'text-green-500' },
-    { name: 'Scheduled', value: queue.length.toString(), icon: Clock, color: 'text-blue-500' },
-    { name: 'Connected Platforms', value: profile?.platforms?.length || '0', icon: Layers, color: 'text-purple-500' },
+    { name: 'Published', value: profile?.total_posts || '0', icon: CheckCircle2, color: 'text-success' },
+    { name: 'Scheduled', value: queue.length.toString(), icon: Clock, color: 'text-primary' },
+    { name: 'Connected', value: profile?.platforms?.length || '0', icon: Layers, color: 'text-success' },
   ]
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
       
-      <main className="flex-1 ml-64 p-8 space-y-8 overflow-y-auto">
+      <main className="flex-1 ml-64 p-8 space-y-10 overflow-y-auto bg-gradient relative">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+
         {/* Header */}
-        <div className="flex justify-between items-end">
-          <div>
-            <h1 className="text-3xl font-bold">Welcome back, {profile?.business_name || 'Grower'}!</h1>
-            <p className="text-muted-foreground mt-1">Here is what&apos;s happening with your socials today.</p>
+        <div className="flex justify-between items-center bg-card/30 p-8 rounded-[2rem] border border-border shadow-2xl backdrop-blur-md">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="badge bg-success/10 text-success border border-success/20">
+                <TrendingUp className="w-3 h-3" /> System Online
+              </span>
+            </div>
+            <h1 className="text-4xl font-extrabold tracking-tight font-heading">
+              {profile?.business_name ? `Grow, ${profile.business_name}` : 'Welcome back, Grower!'}
+            </h1>
+            <p className="text-muted-foreground font-medium">Your engine is primed and content is being generated daily.</p>
           </div>
           <button 
             onClick={handleGenerate} 
             disabled={isGenerating}
-            className="btn btn-primary gap-2 shadow-xl shadow-primary/20"
+            className="btn btn-primary h-14 px-8 text-md font-bold gap-3 shadow-[0_0_30px_-5px_hsla(var(--primary),0.4)] transition-all hover:scale-105 active:scale-95"
           >
-            {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-            {isGenerating ? 'Generating...' : 'Generate Now'}
+            {isGenerating ? <Loader2 className="w-6 h-6 animate-spin" /> : <div className="p-1.5 bg-black/10 rounded-lg"><Plus className="w-5 h-5" /></div>}
+            {isGenerating ? 'Firing AI...' : 'Generate New Content'}
           </button>
         </div>
 
-        {/* Status Cards */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {stats.map((stat) => (
-            <div key={stat.name} className="glass card flex items-center justify-between p-6">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">{stat.name}</p>
-                <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
+            <div key={stat.name} className="card p-6 flex flex-col justify-between group h-40">
+              <div className="flex justify-between items-start">
+                <div className={`p-3 rounded-2xl bg-muted/50 border border-border group-hover:border-primary/30 transition-colors`}>
+                  <stat.icon className={`w-6 h-6 ${stat.color} transition-all group-hover:scale-110`} />
+                </div>
+                <div className="w-1.5 h-1.5 rounded-full bg-border group-hover:bg-primary transition-colors" />
               </div>
-              <div className={`p-3 rounded-xl bg-background border border-border`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              <div>
+                <h3 className="text-3xl font-black mt-2 font-heading">{stat.value}</h3>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{stat.name}</p>
               </div>
             </div>
           ))}
@@ -127,77 +147,98 @@ export default function DashboardPage() {
           {/* Content Queue */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Calendar className="text-primary w-5 h-5" /> Content Queue
+              <h2 className="text-2xl font-extrabold flex items-center gap-3 font-heading">
+                <div className="p-1.5 bg-primary/10 rounded-lg border border-primary/20"><Calendar className="text-primary w-5 h-5" /></div> Content Queue
               </h2>
-              <button className="text-sm text-primary font-semibold hover:underline">View All</button>
+              <Link href="/dashboard/queue" className="btn btn-ghost text-xs font-bold gap-1 uppercase tracking-widest">
+                Explore Full Queue <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
 
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
               {queue.map((post) => (
-                <div key={post.id} className="glass card flex gap-6 p-4 items-center group">
-                  <div className="relative w-32 h-32 rounded-lg overflow-hidden shrink-0 border border-border">
-                    <img src={post.image_url} alt="Post preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                <div key={post.id} className="card p-4 flex gap-6 items-center group relative overflow-hidden">
+                  <div className="w-32 h-32 rounded-xl overflow-hidden shrink-0 border border-border bg-muted">
+                    <img src={post.image_url} alt="Post preview" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <Clock className="w-3 h-3" /> {new Date(post.scheduled_at).toLocaleString()}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded border border-primary/10">
+                        {new Date(post.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric' })} at {new Date(post.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
-                    <p className="font-medium line-clamp-2 mb-3">{post.caption}</p>
-                    <div className="flex gap-2">
+                    <p className="font-bold text-lg line-clamp-1 group-hover:text-primary transition-colors">{post.caption}</p>
+                    <div className="flex gap-1.5">
                       {post.platforms.map((p: string) => (
-                        <span key={p} className="px-2 py-1 rounded bg-secondary text-[10px] uppercase font-bold tracking-wider">
+                        <span key={p} className="px-2 py-0.5 rounded-md border border-border bg-muted/30 text-[9px] uppercase font-heavy tracking-tighter">
                           {p}
                         </span>
                       ))}
                     </div>
                   </div>
-                  <button className="p-2 rounded-lg hover:bg-accent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
+                  <ChevronRight className="w-6 h-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
                 </div>
               ))}
-              {queue.length === 0 && (
-                <div className="p-12 text-center border-2 border-dashed border-border rounded-xl">
-                  <p className="text-muted-foreground">No posts scheduled. Click &quot;Generate Now&quot; to start!</p>
+              {queue.length === 0 && !loading && (
+                <div className="p-16 text-center border-2 border-dashed border-border rounded-[2rem] bg-muted/5 space-y-4">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-muted/10 flex items-center justify-center">
+                    <Zap className="w-6 h-6 text-muted-foreground/30" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-bold text-muted-foreground">Your queue is empty</p>
+                    <p className="text-sm text-muted-foreground/60">Click &quot;Generate New Content&quot; to bring your feed to life.</p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Recent Activity / Insights Card */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <BarChart3 className="text-primary w-5 h-5" /> Recent Activity
-            </h2>
-            <div className="glass card divide-y divide-border p-0">
-              {[
-                { label: 'Facebook Post', status: 'Published', time: '2 hours ago' },
-                { label: 'Instagram Reel', status: 'Published', time: '5 hours ago' },
-                { label: 'TikTok Video', status: 'Failed', time: 'Yesterday' },
-              ].map((item, i) => (
-                <div key={i} className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">{item.time}</p>
+          {/* Activity Column */}
+          <div className="space-y-8">
+            <div className="space-y-6">
+              <h2 className="text-2xl font-extrabold flex items-center gap-3 font-heading">
+                <div className="p-1.5 bg-success/10 rounded-lg border border-success/20"><BarChart3 className="text-success w-5 h-5" /></div> Activity
+              </h2>
+              <div className="card p-0 overflow-hidden divide-y divide-border/50">
+                {recentActivity.map((item) => (
+                  <div key={item.id} className="p-5 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold line-clamp-1">{item.caption || 'AI Generated Post'}</p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
+                        {new Date(item.updated_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                      item.status === 'published' 
+                        ? 'bg-success/10 text-success border-success/20' 
+                        : 'bg-destructive/10 text-destructive border-destructive/20'
+                    }`}>
+                      {item.status}
+                    </span>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
-                    item.status === 'Published' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-                  }`}>
-                    {item.status}
-                  </span>
-                </div>
-              ))}
+                ))}
+                {recentActivity.length === 0 && !loading && (
+                  <div className="p-10 text-center space-y-3">
+                    <AlertCircle className="w-8 h-8 text-muted-foreground/20 mx-auto" />
+                    <p className="text-xs font-bold text-muted-foreground/50 uppercase tracking-widest">No activity yet</p>
+                  </div>
+                )}
+              </div>
             </div>
             
-            <div className="glass card bg-primary/10 border-primary/20 space-y-4">
-              <h4 className="font-bold flex items-center gap-2">
-                <Sparkles className="text-primary w-4 h-4" /> AI Suggestion
+            <div className="card bg-gradient-to-br from-primary/10 to-success/5 border-primary/20 space-y-5 p-8 relative overflow-hidden group">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all" />
+              <h4 className="font-extrabold flex items-center gap-2 text-lg">
+                <Sparkles className="text-primary w-5 h-5" /> Insights
               </h4>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Your educational posts are getting 40% more engagement on LinkedIn. Should we generate more of those?
+              <p className="text-sm text-muted-foreground leading-relaxed font-medium">
+                {profile?.onboarding_completed 
+                  ? "Your engine is currently analyzing your industry performance. Check back in 24h for detailed suggestions."
+                  : "Complete your profile setup to let our AI build your personalized content strategy."}
               </p>
-              <button className="btn btn-secondary w-full text-xs py-2">Try it now</button>
+              <button className="btn btn-outline border-primary/30 w-full text-xs py-3 font-bold uppercase tracking-widest hover:bg-primary/5 transition-all">
+                Learn More
+              </button>
             </div>
           </div>
         </div>

@@ -9,7 +9,8 @@ import {
   Share2, 
   HelpCircle, 
   LogOut,
-  Sparkles
+  Sparkles,
+  ChevronRight
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-browser'
 
@@ -32,41 +33,49 @@ export default function Sidebar() {
   }
 
   return (
-    <div className="w-64 glass min-h-screen border-r border-border flex flex-col fixed left-0 top-0">
+    <div className="w-64 glass min-h-screen border-r border-border flex flex-col fixed left-0 top-0 z-40 bg-card/50">
       <div className="p-6 flex items-center gap-3">
-        <div className="p-2 bg-primary/20 rounded-xl">
+        <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
           <Sparkles className="text-primary w-6 h-6" />
         </div>
-        <span className="text-xl font-bold tracking-tight">Sparkyn</span>
+        <span className="text-xl font-bold tracking-tight font-heading">Sparkyn</span>
       </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-1">
+      <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+        <div className="px-3 mb-2">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Menu</p>
+        </div>
         {navigation.map((item) => {
           const isActive = pathname === item.href
           return (
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${
+              className={`flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-all group ${
                 isActive 
-                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' 
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  ? 'bg-primary/10 text-primary border border-primary/20 shadow-lg shadow-primary/5' 
+                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground border border-transparent'
               }`}
             >
-              <item.icon className="w-5 h-5" />
-              {item.name}
+              <div className="flex items-center gap-3">
+                <item.icon className={`w-[18px] h-[18px] transition-colors ${isActive ? 'text-primary' : 'group-hover:text-foreground'}`} />
+                <span className="text-sm">{item.name}</span>
+              </div>
+              {isActive && <div className="w-1 h-1 rounded-full bg-primary" />}
             </Link>
           )
         })}
       </nav>
 
-      <div className="p-4 border-t border-border">
+      <div className="p-4 mt-auto border-t border-border/50">
         <button 
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg font-medium transition-all"
+          className="flex items-center gap-3 w-full px-3 py-2.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg font-medium transition-all text-sm group"
         >
-          <LogOut className="w-5 h-5" />
-          Sign Out
+          <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
+            <LogOut className="w-4 h-4" />
+          </div>
+          <span>Sign Out</span>
         </button>
       </div>
     </div>
