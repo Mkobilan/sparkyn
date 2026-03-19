@@ -14,6 +14,8 @@ import {
   ExternalLink,
   ShieldCheck
 } from 'lucide-react'
+import FacebookSDK from '@/components/FacebookSDK'
+
 
 export default function ConnectAccountsPage() {
   const [profile, setProfile] = useState<any>(null)
@@ -45,7 +47,30 @@ export default function ConnectAccountsPage() {
   const isConnected = (id: string) => profile?.platforms?.includes(id)
 
   const handleConnect = (id: string) => {
-    window.location.href = `/api/auth/${id}`
+    if (id === 'facebook' || id === 'instagram') {
+      if (typeof window !== 'undefined' && window.FB) {
+        window.FB.login((response: any) => {
+          if (response.authResponse) {
+            const accessToken = response.authResponse.accessToken;
+            // Send to our backend to store
+            fetch('/api/auth/facebook/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ accessToken, platform: id })
+            }).then(() => {
+              window.location.reload();
+            });
+          }
+        }, { 
+          scope: 'email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish',
+          config_id: '953923493837689' // Potentially needed for Login for Business
+        });
+      } else {
+        window.location.href = `/api/auth/${id}`
+      }
+    } else {
+      window.location.href = `/api/auth/${id}`
+    }
   }
 
   const handleDisconnect = async (id: string) => {
@@ -74,7 +99,9 @@ export default function ConnectAccountsPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
+      <FacebookSDK appId="953923493837689" />
       <Sidebar />
+
       
       <main className="main-content bg-gradient relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
