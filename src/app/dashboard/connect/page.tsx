@@ -44,6 +44,34 @@ export default function ConnectAccountsPage() {
 
   const isConnected = (id: string) => profile?.platforms?.includes(id)
 
+  const handleConnect = (id: string) => {
+    window.location.href = `/api/auth/${id}`
+  }
+
+  const handleDisconnect = async (id: string) => {
+    if (!profile) return
+    
+    // Remove from social_accounts table
+    await supabase
+      .from('social_accounts')
+      .delete()
+      .eq('user_id', profile.id)
+      .eq('platform', id)
+
+    // Remove from profiles.platforms array
+    const newPlatforms = profile.platforms.filter((p: string) => p !== id)
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ platforms: newPlatforms })
+      .eq('id', profile.id)
+      .select()
+      .single()
+
+    if (!error) {
+      setProfile(data)
+    }
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -92,14 +120,20 @@ export default function ConnectAccountsPage() {
                 <div className="space-y-4">
                   <div className="p-4 rounded-xl bg-success/10 border border-success/20 text-success text-sm font-bold flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                    Connected as @{profile.business_name.toLowerCase().replace(/\s+/g, '')}
+                    Connected
                   </div>
-                  <button className="btn btn-ghost w-full text-destructive hover:bg-destructive/10 border border-destructive/10 text-xs font-bold uppercase tracking-widest">
+                  <button 
+                    onClick={() => handleDisconnect(platform.id)}
+                    className="btn btn-ghost w-full text-destructive hover:bg-destructive/10 border border-destructive/10 text-xs font-bold uppercase tracking-widest"
+                  >
                     Disconnect Account
                   </button>
                 </div>
               ) : (
-                <button className="btn btn-primary w-full gap-2 py-4 rounded-xl shadow-[0_8px_20px_-6px_hsla(var(--primary),0.4)]">
+                <button 
+                  onClick={() => handleConnect(platform.id)}
+                  className="btn btn-primary w-full gap-2 py-4 rounded-xl shadow-[0_8px_20px_-6px_hsla(var(--primary),0.4)]"
+                >
                   <Plus className="w-4 h-4" /> Connect {platform.name}
                 </button>
               )}
