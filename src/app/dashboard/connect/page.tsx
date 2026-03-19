@@ -62,7 +62,8 @@ export default function ConnectAccountsPage() {
             });
           }
         }, { 
-          scope: 'email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish'
+          scope: 'email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish',
+          config_id: '1642865807168430'
         });
       } else {
         window.location.href = `/api/auth/${id}`
