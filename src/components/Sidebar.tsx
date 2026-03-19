@@ -25,6 +25,14 @@ const navigation = [
   { name: 'Help', href: '/dashboard/help', icon: HelpCircle },
 ]
 
+const platforms = [
+  { name: 'Facebook', href: '/dashboard/facebook', icon: Sparkles },
+  { name: 'Instagram', href: '/dashboard/instagram', icon: Sparkles },
+  { name: 'TikTok', href: '/dashboard/tiktok', icon: Sparkles },
+  { name: 'YouTube', href: '/dashboard/youtube', icon: Sparkles },
+]
+
+
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -74,6 +82,23 @@ export default function Sidebar() {
               {isActive && (
                 <div className="w-1.5 h-1.5 rounded-full bg-white shrink-0 animate-pulse" />
               )}
+            </Link>
+          )
+        })}
+        
+        <div className="menu-label mt-6">Social Platforms</div>
+        {platforms.map((platform) => {
+          const isActive = pathname === platform.href
+          return (
+            <Link
+              key={platform.name}
+              href={platform.href}
+              className={`nav-link ${isActive ? 'active' : ''}`}
+            >
+              <div className="nav-icon shrink-0">
+                <platform.icon className="w-[18px] h-[18px]" />
+              </div>
+              <span className="flex-1 truncate">{platform.name}</span>
             </Link>
           )
         })}

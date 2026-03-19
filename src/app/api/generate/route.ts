@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
+    const { accountId } = await request.json().catch(() => ({}));
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     
@@ -22,12 +23,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    // 2. Get all active social accounts
-    const { data: accounts, error: accountsError } = await supabase
+    // 2. Get active social accounts
+    let query = supabase
       .from('social_accounts')
       .select('*')
       .eq('user_id', user.id)
       .eq('is_active', true)
+
+    if (accountId) {
+      query = query.eq('id', accountId)
+    }
+
+    const { data: accounts, error: accountsError } = await query
 
     if (accountsError || !accounts || accounts.length === 0) {
       return NextResponse.json({ error: 'No active social accounts connected' }, { status: 400 })
