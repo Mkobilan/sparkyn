@@ -55,23 +55,14 @@ export const aiService = {
     try {
       return await tryGenerate("gemini-2.5-flash");
     } catch (e: any) {
-      console.warn(`Fallback: gemini-2.5-flash failed: ${e.message}`);
-      try {
-        return await tryGenerate("gemini-flash-latest");
-      } catch (e2: any) {
-        console.warn(`Fallback: gemini-flash-latest failed: ${e2.message}`);
-        try {
-          // Last resort fallback without JSON mime type enforcement, manual parsing
-          const fallbackModel = genAI.getGenerativeModel({ model: "gemini-pro-latest" });
-          const result = await fallbackModel.generateContent(prompt + "\n\nRETURN ONLY VALID JSON. NO MARKDOWN BACKTICKS.");
-          let text = result.response.text().trim();
-          if (text.startsWith("```json")) text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-          return JSON.parse(text);
-        } catch (e3: any) {
-          console.error("AI Content generation ultimately failed:", e3.message);
-          throw e3;
-        }
-      }
+      console.error("Primary AI model gemini-2.5-flash failed:", e.message);
+      // Let's try WITHOUT the JSON mime type enforcement, just in case 2.5 doesn't like it on v1beta yet
+      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const result = await fallbackModel.generateContent(prompt + "\n\nCRITICAL: RETURN ONLY VALID JSON. DO NOT USE MARKDOWN BACKTICKS.");
+      let text = result.response.text().trim();
+      if (text.startsWith("```json")) text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+      else if (text.startsWith("```")) text = text.replace(/```/g, "").trim();
+      return JSON.parse(text);
     }
   },
 
