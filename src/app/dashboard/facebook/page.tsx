@@ -19,8 +19,10 @@ import Link from 'next/link'
 
 export default function FacebookDashboard() {
   const [pages, setPages] = useState<any[]>([])
+  const [queue, setQueue] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [scheduledTimes, setScheduledTimes] = useState<Record<string, string>>({})
   const supabase = createClient()
 
   const fetchPages = async () => {
@@ -33,7 +35,14 @@ export default function FacebookDashboard() {
       .eq('user_id', user.id)
       .eq('platform', 'facebook')
     
-    setPages(data || [])
+    const { data: queueData } = await supabase
+      .from('scheduled_posts')
+      .select('*')
+      .contains('platforms', ['facebook'])
+      .order('scheduled_at', { ascending: true })
+      .limit(5)
+    
+    setQueue(queueData || [])
     setLoading(false)
   }
 
@@ -41,26 +50,27 @@ export default function FacebookDashboard() {
     fetchPages()
   }, [])
 
-  const handleGenerate = async (accountId?: string) => {
-    setIsGenerating(true)
+  const handleGenerate = async (accountId: string, publishNow: boolean = false) => {
+    setGeneratingId(accountId)
     try {
+      const scheduledAt = scheduledTimes[accountId]
       const response = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId }) // Optionally trigger only for this page
+        body: JSON.stringify({ accountId, publishNow, scheduledAt })
       })
       const data = await response.json()
       if (data.success) {
-        alert('Content generated successfully!')
+        alert(publishNow ? 'Content published to Facebook!' : 'Content generated and added to queue!')
         fetchPages()
       } else {
-        alert(`Generation failed: ${data.error || 'Unknown error'}`)
+        alert(`Failed: ${data.error || 'Unknown error'}`)
       }
     } catch (error: any) {
       console.error(error)
       alert(`Network error: ${error.message}`)
     } finally {
-      setIsGenerating(false)
+      setGeneratingId(null)
     }
   }
 
@@ -150,21 +160,33 @@ export default function FacebookDashboard() {
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Schedule</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Custom Schedule</label>
                     <div className="h-12 bg-muted rounded-xl flex items-center px-4 font-bold text-sm border border-border/50">
-                      1 Post / Day
+                      <input 
+                        type="datetime-local" 
+                        value={scheduledTimes[page.id] || ''}
+                        onChange={(e) => setScheduledTimes({ ...scheduledTimes, [page.id]: e.target.value })}
+                        className="bg-transparent border-none outline-none w-full text-white cursor-pointer"
+                      />
                     </div>
                   </div>
                 </div>
 
                 <div className="flex gap-4">
                   <button 
-                    onClick={() => handleGenerate(page.id)}
-                    disabled={isGenerating}
+                    onClick={() => handleGenerate(page.id, true)}
+                    disabled={!!generatingId}
+                    className="flex-1 btn btn-primary font-bold gap-2 py-4 rounded-xl shadow-lg"
+                  >
+                    {generatingId === page.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Publish Now
+                  </button>
+                  <button 
+                    onClick={() => handleGenerate(page.id, false)}
+                    disabled={!!generatingId}
                     className="flex-1 btn btn-outline border-[#1877F2]/20 hover:bg-[#1877F2]/10 text-[#1877F2] font-bold gap-2 py-4 rounded-xl"
                   >
-                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Quick Generate
+                    Schedule AI
                   </button>
                   <button className="btn btn-ghost w-14 h-14 p-0 rounded-xl border border-border/50">
                     <Settings2 className="w-5 h-5 text-muted-foreground" />

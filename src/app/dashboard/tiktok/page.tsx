@@ -20,7 +20,8 @@ import Link from 'next/link'
 export default function TikTokDashboard() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [scheduledTimes, setScheduledTimes] = useState<Record<string, string>>({})
   const supabase = createClient()
 
   const fetchAccounts = async () => {
@@ -41,22 +42,27 @@ export default function TikTokDashboard() {
     fetchAccounts()
   }, [])
 
-  const handleGenerate = async (accountId?: string) => {
-    setIsGenerating(true)
+  const handleGenerate = async (accountId: string, publishNow: boolean = false) => {
+    setGeneratingId(accountId)
     try {
+      const scheduledAt = scheduledTimes[accountId]
       const response = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId })
+        body: JSON.stringify({ accountId, publishNow, scheduledAt })
       })
       const data = await response.json()
       if (data.success) {
-        // Refresh or show success
+        alert(publishNow ? 'Content published to TikTok!' : 'Content generated and added to queue!')
+        fetchAccounts()
+      } else {
+        alert(`Failed: ${data.error || 'Unknown error'}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
+      alert(`Network error: ${error.message}`)
     } finally {
-      setIsGenerating(false)
+      setGeneratingId(null)
     }
   }
 
@@ -143,21 +149,33 @@ export default function TikTokDashboard() {
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Generation</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Custom Schedule</label>
                     <div className="h-12 bg-muted rounded-xl flex items-center px-4 font-bold text-sm border border-border/50 text-primary">
-                      Auto-Pilot ON
+                      <input 
+                        type="datetime-local" 
+                        value={scheduledTimes[account.id] || ''}
+                        onChange={(e) => setScheduledTimes({ ...scheduledTimes, [account.id]: e.target.value })}
+                        className="bg-transparent border-none outline-none w-full text-white cursor-pointer"
+                      />
                     </div>
                   </div>
                 </div>
 
                 <div className="flex gap-4">
                   <button 
-                    onClick={() => handleGenerate(account.id)}
-                    disabled={isGenerating}
+                    onClick={() => handleGenerate(account.id, true)}
+                    disabled={!!generatingId}
+                    className="flex-1 btn btn-primary bg-primary border-primary hover:bg-primary/90 text-background font-bold gap-2 py-4 rounded-xl shadow-[0_4px_14px_0_rgba(0,242,234,0.39)]"
+                  >
+                    {generatingId === account.id ? <Loader2 className="w-4 h-4 animate-spin text-background" /> : <Sparkles className="w-4 h-4 text-background" />}
+                    Publish Now
+                  </button>
+                  <button 
+                    onClick={() => handleGenerate(account.id, false)}
+                    disabled={!!generatingId}
                     className="flex-1 btn btn-outline border-primary/20 hover:bg-primary/10 text-primary font-bold gap-2 py-4 rounded-xl"
                   >
-                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Generate Video
+                    Schedule AI
                   </button>
                   <button className="btn btn-ghost w-14 h-14 p-0 rounded-xl border border-border/50">
                     <Settings2 className="w-5 h-5 text-muted-foreground" />

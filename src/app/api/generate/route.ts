@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase'
 import { aiService } from '@/services/ai'
+import { metaService } from '@/services/social/meta'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
-    const { accountId } = await request.json().catch(() => ({}));
+    const { accountId, publishNow, scheduledAt } = await request.json().catch(() => ({}));
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     
@@ -66,22 +67,64 @@ export async function POST(request: Request) {
         const imageUrl = await aiService.generateImage(profile.business_description, content.caption)
 
         // 4. Store in scheduled_posts
-        const scheduledTime = new Date()
-        scheduledTime.setHours(scheduledTime.getHours() + 1) // Default to 1 hour from now
+        const scheduledTime = scheduledAt ? new Date(scheduledAt) : new Date()
+        if (!scheduledAt && !publishNow) {
+          scheduledTime.setHours(scheduledTime.getHours() + 1) // Default to 1 hour from now
+        }
+
+        let status = 'scheduled'
+        let publishedAt = null
+
+        if (publishNow) {
+          if (account.platform === 'facebook') {
+            console.log(`Publishing now to Facebook Page: ${account.platform_name}`)
+            const pubResult = await metaService.publishToFacebook(account.access_token, account.platform_user_id, {
+              imageUrl: imageUrl,
+              caption: `${content.hook}\n\n${content.caption}\n\n${content.cta}\n\n${content.hashtags}`
+            })
+            
+            if (pubResult.id) {
+              status = 'published'
+              publishedAt = new Date().toISOString()
+            } else {
+              console.error('Facebook Publish Error:', pubResult)
+              status = 'failed'
+            }
+          } else if (account.platform === 'instagram') {
+            console.log(`Publishing now to Instagram: ${account.platform_name}`)
+            const pubResult = await metaService.publishToInstagram(account.access_token, account.platform_user_id, {
+              imageUrl: imageUrl,
+              caption: `${content.hook}\n\n${content.caption}\n\n${content.cta}\n\n${content.hashtags}`
+            })
+            
+            if (pubResult.id) {
+              status = 'published'
+              publishedAt = new Date().toISOString()
+            } else {
+              console.error('Instagram Publish Error:', pubResult)
+              status = 'failed'
+            }
+          } else {
+            console.log(`Simulating publish now to ${account.platform}: ${account.platform_name}`)
+            status = 'published'
+            publishedAt = new Date().toISOString()
+          }
+        }
 
         const { data: post, error: postError } = await supabase
           .from('scheduled_posts')
           .insert({
             user_id: user.id,
             platforms: [account.platform],
-            platform_account_id: account.id, // Explicitly link to the account
+            platform_account_id: account.id,
             hook: content.hook,
             caption: content.caption,
             cta: content.cta,
             hashtags: content.hashtags ? content.hashtags.split(' ') : [],
             image_url: imageUrl,
             scheduled_at: scheduledTime.toISOString(),
-            status: 'scheduled'
+            published_at: publishedAt,
+            status: status
           })
           .select()
           .single()

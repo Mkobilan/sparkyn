@@ -21,7 +21,8 @@ import Link from 'next/link'
 export default function YoutubeDashboard() {
   const [channels, setChannels] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [scheduledTimes, setScheduledTimes] = useState<Record<string, string>>({})
   const supabase = createClient()
 
   const fetchChannels = async () => {
@@ -42,22 +43,27 @@ export default function YoutubeDashboard() {
     fetchChannels()
   }, [])
 
-  const handleGenerate = async (accountId?: string) => {
-    setIsGenerating(true)
+  const handleGenerate = async (accountId: string, publishNow: boolean = false) => {
+    setGeneratingId(accountId)
     try {
+      const scheduledAt = scheduledTimes[accountId]
       const response = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId })
+        body: JSON.stringify({ accountId, publishNow, scheduledAt })
       })
       const data = await response.json()
       if (data.success) {
-        // Refresh or show success
+        alert(publishNow ? 'Content published to YouTube!' : 'Content generated and added to queue!')
+        fetchChannels()
+      } else {
+        alert(`Failed: ${data.error || 'Unknown error'}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
+      alert(`Network error: ${error.message}`)
     } finally {
-      setIsGenerating(false)
+      setGeneratingId(null)
     }
   }
 
@@ -143,21 +149,33 @@ export default function YoutubeDashboard() {
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Shorts Target</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Custom Schedule</label>
                     <div className="h-12 bg-muted rounded-xl flex items-center px-4 font-bold text-sm border border-border/50">
-                      2 Videos / Week
+                      <input 
+                        type="datetime-local" 
+                        value={scheduledTimes[channel.id] || ''}
+                        onChange={(e) => setScheduledTimes({ ...scheduledTimes, [channel.id]: e.target.value })}
+                        className="bg-transparent border-none outline-none w-full text-white cursor-pointer"
+                      />
                     </div>
                   </div>
                 </div>
 
                 <div className="flex gap-4">
                   <button 
-                    onClick={() => handleGenerate(channel.id)}
-                    disabled={isGenerating}
+                    onClick={() => handleGenerate(channel.id, true)}
+                    disabled={!!generatingId}
+                    className="flex-1 btn btn-primary bg-[#FF0000] border-[#FF0000] hover:bg-[#FF0000]/90 text-white font-bold gap-2 py-4 rounded-xl shadow-[0_4px_14px_0_rgba(255,0,0,0.39)]"
+                  >
+                    {generatingId === channel.id ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Sparkles className="w-4 h-4 text-white" />}
+                    Publish Now
+                  </button>
+                  <button 
+                    onClick={() => handleGenerate(channel.id, false)}
+                    disabled={!!generatingId}
                     className="flex-1 btn btn-outline border-[#FF0000]/20 hover:bg-[#FF0000]/10 text-[#FF0000] font-bold gap-2 py-4 rounded-xl"
                   >
-                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Generate Shorts
+                    Schedule AI
                   </button>
                   <button className="btn btn-ghost w-14 h-14 p-0 rounded-xl border border-border/50">
                     <Settings2 className="w-5 h-5 text-muted-foreground" />
