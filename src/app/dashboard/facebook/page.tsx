@@ -51,10 +51,14 @@ export default function FacebookDashboard() {
       })
       const data = await response.json()
       if (data.success) {
-        // Refresh or show success
+        alert('Content generated successfully!')
+        fetchPages()
+      } else {
+        alert(`Generation failed: ${data.error || 'Unknown error'}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
+      alert(`Network error: ${error.message}`)
     } finally {
       setIsGenerating(false)
     }
@@ -68,6 +72,9 @@ export default function FacebookDashboard() {
     
     if (!error) {
       setPages(prev => prev.map(a => a.id === accountId ? { ...a, content_strategy: strategy } : a))
+    } else {
+      console.error('Update Strategy Error:', error)
+      alert(`Failed to update strategy: ${error.message}`)
     }
   }
 
