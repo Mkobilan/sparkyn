@@ -29,19 +29,24 @@ export default function FacebookDashboard() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data } = await supabase
+    const { data, error: fbError } = await supabase
       .from('social_accounts')
       .select('*')
       .eq('user_id', user.id)
       .eq('platform', 'facebook')
     
-    const { data: queueData } = await supabase
+    if (fbError) console.error("FB Pages Fetch Error:", fbError)
+    
+    const { data: queueData, error: queueError } = await supabase
       .from('scheduled_posts')
       .select('*')
       .contains('platforms', ['facebook'])
       .order('scheduled_at', { ascending: true })
       .limit(5)
+      
+    if (queueError) console.error("FB Queue Fetch Error:", queueError)
     
+    setPages(data || [])
     setQueue(queueData || [])
     setLoading(false)
   }
