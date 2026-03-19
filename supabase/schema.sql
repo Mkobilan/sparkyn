@@ -36,12 +36,15 @@ CREATE TABLE IF NOT EXISTS public.social_accounts (
   user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
   platform TEXT NOT NULL, -- 'facebook', 'instagram', 'tiktok', 'youtube'
   platform_user_id TEXT,
+  platform_name TEXT, -- Page Name or Profile Name
+  metadata JSONB DEFAULT '{}'::jsonb, -- Store profile pic, etc.
+  content_strategy TEXT DEFAULT 'Balanced', -- 'Casual', 'Professional', etc.
   access_token TEXT, -- Store encrypted in production
   refresh_token TEXT,
   expires_at TIMESTAMPTZ,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, platform)
+  UNIQUE(user_id, platform, platform_user_id)
 );
 
 -- Enable RLS

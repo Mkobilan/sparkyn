@@ -19,22 +19,30 @@ import FacebookSDK from '@/components/FacebookSDK'
 
 export default function ConnectAccountsPage() {
   const [profile, setProfile] = useState<any>(null)
+  const [socialAccounts, setSocialAccounts] = useState<any[]>([])
   const supabase = createClient()
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
       
-      setProfile(data)
+      setProfile(profileData)
+
+      const { data: accountsData } = await supabase
+        .from('social_accounts')
+        .select('*')
+        .eq('user_id', user.id)
+      
+      setSocialAccounts(accountsData || [])
     }
-    fetchProfile()
+    fetchData()
   }, [supabase])
 
   const platforms = [
@@ -94,6 +102,18 @@ export default function ConnectAccountsPage() {
 
     if (!error) {
       setProfile(data)
+      setSocialAccounts(prev => prev.filter(a => a.platform !== id))
+    }
+  }
+
+  const updateStrategy = async (accountId: string, strategy: string) => {
+    const { error } = await supabase
+      .from('social_accounts')
+      .update({ content_strategy: strategy })
+      .eq('id', accountId)
+    
+    if (!error) {
+      setSocialAccounts(prev => prev.map(a => a.id === accountId ? { ...a, content_strategy: strategy } : a))
     }
   }
 
@@ -144,16 +164,34 @@ export default function ConnectAccountsPage() {
               </div>
 
               {isConnected(platform.id) ? (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-success/10 border border-success/20 text-success text-sm font-bold flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                    Connected
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    {socialAccounts.filter(a => a.platform === platform.id).map(account => (
+                      <div key={account.id} className="p-4 rounded-xl bg-background/50 border border-border flex items-center justify-between group/account">
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                          <span className="font-bold text-sm">{account.platform_name || 'Connected Page'}</span>
+                        </div>
+                        <select 
+                          value={account.content_strategy}
+                          onChange={(e) => updateStrategy(account.id, e.target.value)}
+                          className="bg-muted text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border-none focus:ring-1 focus:ring-primary cursor-pointer"
+                        >
+                          <option value="Balanced">Balanced</option>
+                          <option value="Casual">Casual</option>
+                          <option value="Professional">Professional</option>
+                          <option value="Direct Sales">Direct Sales</option>
+                          <option value="Educational">Educational</option>
+                        </select>
+                      </div>
+                    ))}
                   </div>
+
                   <button 
                     onClick={() => handleDisconnect(platform.id)}
                     className="btn btn-ghost w-full text-destructive hover:bg-destructive/10 border border-destructive/10 text-xs font-bold uppercase tracking-widest"
                   >
-                    Disconnect Account
+                    Disconnect All {platform.name}s
                   </button>
                 </div>
               ) : (
