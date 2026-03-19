@@ -56,7 +56,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto">
+      <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto min-h-0">
         <div className="menu-label">Main Experience</div>
         {navigation.map((item) => {
           const isActive = pathname === item.href
@@ -65,13 +65,14 @@ export default function Sidebar() {
               key={item.name}
               href={item.href}
               className={`nav-link ${isActive ? 'active' : ''}`}
+              style={{ marginBottom: '4px' }}
             >
-              <div className="nav-icon">
+              <div className="nav-icon shrink-0">
                 <item.icon className="w-[18px] h-[18px]" />
               </div>
-              <span className="flex-1">{item.name}</span>
+              <span className="flex-1 truncate">{item.name}</span>
               {isActive && (
-                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                <div className="w-1.5 h-1.5 rounded-full bg-white shrink-0 animate-pulse" />
               )}
             </Link>
           )
@@ -88,16 +89,16 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer / User */}
-      <div className="mt-auto border-t border-white/5 pt-4 pb-4">
+      <div className="mt-auto border-t border-white/5 pt-4 pb-4 shrink-0">
         <div className="user-card mx-4 mb-4">
-          <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center border border-white/10">
+          <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center border border-white/10 shrink-0">
             <User className="w-5 h-5 text-muted-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold truncate">{user?.email?.split('@')[0] || 'Creator'}</p>
+            <p className="text-xs font-bold truncate text-white">{user?.email?.split('@')[0] || 'Creator'}</p>
             <p className="text-[9px] text-muted-foreground truncate uppercase tracking-widest font-heavy">Free Tier</p>
           </div>
-          <Zap className="w-3.5 h-3.5 text-primary animate-pulse" />
+          <Zap className="w-3.5 h-3.5 text-primary shrink-0 animate-pulse" />
         </div>
         
         <div className="px-4">

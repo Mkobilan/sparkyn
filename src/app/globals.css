@@ -310,7 +310,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 /* Selection */
 /* Sidebar Bespoke Styles */
 .nav-sidebar {
-  width: 280px;
+  width: 260px;
   height: calc(100vh - 2rem);
   margin: 1rem;
   border-radius: 1.5rem;
@@ -322,6 +322,23 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   z-index: 50;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 280px; /* sidebar width (260) + margin (10 * 2?) wait, margin is 1rem (16px) */
+  /* Margin-left should be 260 + 16(margin) + some padding = 280-300px */
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+@media (max-width: 1024px) {
+  .nav-sidebar {
+    transform: translateX(-110%);
+  }
+  .main-content {
+    margin-left: 0;
+  }
 }
 
 .nav-link {

@@ -44,7 +44,7 @@ export default function QueuePage() {
     <div className="flex min-h-screen bg-background">
       <Sidebar />
       
-      <main className="flex-1 ml-64 p-8 space-y-8 overflow-y-auto bg-gradient relative">
+      <main className="main-content bg-gradient relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
 
         {/* Header */}
