@@ -65,11 +65,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Update post status
+    // 3. Update post status based on results
+    const hasFailures = Object.values(results).some((r: any) => r.error)
+    const newStatus = hasFailures ? (post.retry_count >= 2 ? 'failed' : 'scheduled') : 'published'
+
     await supabase
       .from('scheduled_posts')
       .update({ 
-        status: 'published', 
+        status: newStatus,
+        retry_count: hasFailures ? post.retry_count + 1 : post.retry_count,
+        error_message: hasFailures ? JSON.stringify(results) : null,
         updated_at: new Date().toISOString() 
       })
       .eq('id', postId)

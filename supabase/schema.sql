@@ -16,6 +16,20 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Trigger to create profile on signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id)
+  VALUES (new.id);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 -- Create social_accounts table
 CREATE TABLE IF NOT EXISTS public.social_accounts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -63,6 +77,7 @@ CREATE TABLE IF NOT EXISTS public.scheduled_posts (
   image_url TEXT,
   scheduled_at TIMESTAMPTZ NOT NULL,
   status TEXT DEFAULT 'scheduled', -- 'scheduled', 'published', 'failed'
+  retry_count INTEGER DEFAULT 0,
   error_message TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -76,3 +91,22 @@ CREATE POLICY "Users can view own scheduled posts" ON public.scheduled_posts
 
 CREATE POLICY "Users can manage own scheduled posts" ON public.scheduled_posts
   FOR ALL USING (auth.uid() = user_id);
+
+-- Updated at triggers function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_social_accounts_updated_at BEFORE UPDATE ON public.social_accounts FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_scheduled_posts_updated_at BEFORE UPDATE ON public.scheduled_posts FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_scheduled_posts_user_id ON public.scheduled_posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_posts_status ON public.scheduled_posts(status);
+CREATE INDEX IF NOT EXISTS idx_scheduled_posts_scheduled_at ON public.scheduled_posts(scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_social_accounts_user_id ON public.social_accounts(user_id);
