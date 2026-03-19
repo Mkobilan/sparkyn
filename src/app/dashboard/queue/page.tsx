@@ -13,6 +13,7 @@ import {
   Filter,
   Search
 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function QueuePage() {
   const [queue, setQueue] = useState<any[]>([])
