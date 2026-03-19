@@ -129,6 +129,11 @@ export async function POST(request: Request) {
           .select()
           .single()
 
+        if (postError) {
+          console.error('Failed to insert scheduled_post:', postError)
+          throw new Error(`Database error saving post: ${postError.message}`)
+        }
+
         if (post) generatedPosts.push(post)
       } catch (err: any) {
         console.error(`Failed to generate for ${account.platform}:`, err.message)
