@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     }
 
     const generatedPosts = []
+    const generationErrors: string[] = []
 
     for (const account of accounts) {
       console.log(`Generating content for ${account.platform} (${account.platform_name})...`)
@@ -131,13 +132,20 @@ export async function POST(request: Request) {
 
         if (postError) {
           console.error('Failed to insert scheduled_post:', postError)
-          throw new Error(`Database error saving post: ${postError.message}`)
+          throw new Error(`DB Error: ${postError.message}`)
         }
 
         if (post) generatedPosts.push(post)
       } catch (err: any) {
         console.error(`Failed to generate for ${account.platform}:`, err.message)
+        generationErrors.push(`[${account.platform_name}] ${err.message}`)
       }
+    }
+
+    if (generatedPosts.length === 0) {
+      return NextResponse.json({ 
+        error: `Failed to generate content. Errors: ${generationErrors.join(' | ')} (Check if GEMINI_API_KEY is set in Vercel)` 
+      }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, posts: generatedPosts })
