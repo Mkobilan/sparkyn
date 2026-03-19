@@ -17,13 +17,6 @@ export const aiService = {
     postsPerDay?: number;
     websiteUrl?: string;
   }) {
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-      }
-    });
-
     const prompt = `
       You are a social media marketing expert. Generate a high-converting social media post for the following business: ${params.businessName}, in the ${params.industry} industry.
       ${params.niche ? `Niche: ${params.niche}` : ""}
@@ -48,13 +41,37 @@ export const aiService = {
       - YouTube: Focus on catchy titles and educational/entertaining value (Shorts style).
     `;
 
-    try {
+    const tryGenerate = async (modelName: string) => {
+      const model = genAI.getGenerativeModel({ 
+        model: modelName,
+        generationConfig: {
+          responseMimeType: "application/json",
+        }
+      });
       const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      return JSON.parse(text);
+      return JSON.parse(result.response.text());
+    }
+
+    try {
+      return await tryGenerate("gemini-1.5-flash-latest");
     } catch (e: any) {
-      console.error("AI Content generation failed:", e.message);
-      throw e;
+      console.warn(`Fallback: gemini-1.5-flash-latest failed: ${e.message}`);
+      try {
+        return await tryGenerate("gemini-1.5-pro-latest");
+      } catch (e2: any) {
+        console.warn(`Fallback: gemini-1.5-pro-latest failed: ${e2.message}`);
+        try {
+          // Last resort fallback without JSON mime type enforcement, manual parsing
+          const fallbackModel = genAI.getGenerativeModel({ model: "gemini-pro" });
+          const result = await fallbackModel.generateContent(prompt + "\n\nRETURN ONLY VALID JSON. NO MARKDOWN BACKTICKS.");
+          let text = result.response.text().trim();
+          if (text.startsWith("```json")) text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+          return JSON.parse(text);
+        } catch (e3: any) {
+          console.error("AI Content generation ultimately failed:", e3.message);
+          throw e3;
+        }
+      }
     }
   },
 
