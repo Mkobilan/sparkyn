@@ -167,9 +167,16 @@ export default function DashboardPage() {
                         rel="noopener noreferrer"
                         className="btn btn-outline border-primary/20 w-full justify-between group hover:border-primary/50 transition-all font-bold"
                       >
-                        <span className="flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-primary" />
-                          View on {link.platform}
+                        <span className="flex flex-col items-start gap-0.5">
+                          <span className="flex items-center gap-2">
+                            <Zap className="w-4 h-4 text-primary" />
+                            View on {link.platform}
+                          </span>
+                          {link.channelTitle && (
+                            <span className="text-[10px] text-muted-foreground ml-6">
+                              Channel: {link.channelTitle}
+                            </span>
+                          )}
                         </span>
                         <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </a>

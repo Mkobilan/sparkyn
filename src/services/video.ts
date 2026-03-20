@@ -73,8 +73,8 @@ export class VideoService {
             
             // 2. Save Images and Build FFmpeg Concat file
             let concatContent = '';
-            // We give each image an exact 4 second slide duration
-            const SLIDE_DURATION = 4;
+            // Give each image a long duration (10s) and let -shortest cut it to match the audio
+            const SLIDE_DURATION = 10;
             
             for (let i = 0; i < imagesBase64.length; i++) {
                 let imageBuffer: Buffer;
@@ -106,11 +106,12 @@ export class VideoService {
                     .outputOptions([
                         '-c:v libx264',
                         '-preset ultrafast', // Required for 10s Serverless timeout
+                        '-tune stillimage',
                         '-pix_fmt yuv420p',
-                        // Convert 1:1 square SDXL image to 9:16 vertical TikTok resolution natively
-                        // Lowering to 720p to stay under Vercel 10s timeout
-                        '-vf', 'scale=-1:1280,crop=720:1280',
+                        '-vf', 'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,setsar=1',
                         '-c:a aac',
+                        '-b:a 128k',
+                        '-movflags +faststart', // Essential for YouTube/TikTok processing
                         '-shortest' // Force cut off the video the exact instant the voiceover finishes
                     ])
                     .save(outputPath)

@@ -125,6 +125,7 @@ export async function POST(request: Request) {
         let status = 'scheduled';
         let publishedAt = null;
         let platformPostId = null;
+        let channelTitle = null;
 
         if (publishNow) {
           const pubParams = {
@@ -148,6 +149,7 @@ export async function POST(request: Request) {
             status = 'published';
             publishedAt = new Date().toISOString();
             platformPostId = pubResult.id || pubResult.data?.id;
+            channelTitle = pubResult.channelTitle;
           } else {
             const errDetails = pubResult.error?.message || pubResult.error || JSON.stringify(pubResult);
             throw new Error(`Platform Error: ${errDetails}`);
@@ -169,7 +171,10 @@ export async function POST(request: Request) {
             platform_post_id: platformPostId
         }).select().single();
 
-        if (post) generatedPosts.push(post);
+        if (post) {
+            (post as any)._channelTitle = channelTitle;
+            generatedPosts.push(post);
+        }
       } catch (loopErr: any) {
         console.error(`Loop failure for ${account.platform_name}:`, loopErr);
         generationErrors.push(`[${account.platform_name}] ${loopErr.message || 'Unknown Failure'}`);
@@ -182,7 +187,9 @@ export async function POST(request: Request) {
       .filter(p => p.status === 'published' && p.platform_post_id)
       .map(p => ({ 
         platform: p.platforms[0], 
-        url: p.platforms[0] === 'youtube' ? `https://youtube.com/watch?v=${p.platform_post_id}` : null 
+        url: p.platforms[0] === 'youtube' ? `https://youtube.com/watch?v=${p.platform_post_id}` : null,
+        // Include channelTitle from the current context if it was just published
+        channelTitle: p.platforms[0] === 'youtube' ? (p as any)._channelTitle : null
       }))
       .filter(link => link.url);
 

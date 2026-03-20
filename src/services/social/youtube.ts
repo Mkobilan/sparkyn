@@ -32,12 +32,21 @@ export const youtubeService = {
       auth: oauth2Client,
     });
 
-    // 1. Download video from URL to a buffer/stream
-    const videoResponse = await fetch(params.videoUrl);
-    const videoBuffer = await videoResponse.arrayBuffer();
-    const videoStream = new Readable();
-    videoStream.push(Buffer.from(videoBuffer));
-    videoStream.push(null);
+    // 1. Download video from URL or parse Data URI
+    let videoStream: Readable;
+    if (params.videoUrl.startsWith('data:')) {
+      const base64Data = params.videoUrl.split(',')[1];
+      const videoBuffer = Buffer.from(base64Data, 'base64');
+      videoStream = new Readable();
+      videoStream.push(videoBuffer);
+      videoStream.push(null);
+    } else {
+      const videoResponse = await fetch(params.videoUrl);
+      const videoBuffer = await videoResponse.arrayBuffer();
+      videoStream = new Readable();
+      videoStream.push(Buffer.from(videoBuffer));
+      videoStream.push(null);
+    }
 
     // 2. Perform the upload
     try {
@@ -59,9 +68,22 @@ export const youtubeService = {
         },
       });
 
+      // 3. Fetch channel info to help user find it
+      let channelTitle = 'Unknown Channel';
+      try {
+        const channelResp = await youtube.channels.list({
+          part: ['snippet'],
+          mine: true
+        });
+        channelTitle = channelResp.data.items?.[0]?.snippet?.title || 'Unknown Channel';
+      } catch (e) {
+        console.warn('Could not fetch channel info:', e);
+      }
+
       return {
         id: response.data.id || '',
         status: response.data.status,
+        channelTitle,
         url: `https://youtube.com/watch?v=${response.data.id}`
       };
     } catch (error: any) {
