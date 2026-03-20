@@ -10,14 +10,21 @@ export async function GET(
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   
-  // Get the base URL directly from the current request's origin
-  const { origin: baseUrl } = new URL(request.url)
+  // Get the base URL robustly (must match the one used in the initial redirect)
+  let baseUrl = ''
+  if (process.env.VERCEL_PROJECT_URL) {
+    baseUrl = process.env.VERCEL_PROJECT_URL.replace(/\/$/, '')
+  } else {
+    const { origin } = new URL(request.url)
+    baseUrl = origin
+  }
+
+  const redirectUri = `${baseUrl}/api/auth/callback/${platform}`
 
   if (!code) {
     return NextResponse.redirect(`${baseUrl}/dashboard/connect?error=no_code`)
   }
 
-  const redirectUri = `${baseUrl}/api/auth/callback/${platform}`
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -59,7 +66,7 @@ export async function GET(
         body: new URLSearchParams({
           client_key: process.env.TIKTOK_CLIENT_KEY!,
           client_secret: process.env.TIKTOK_CLIENT_SECRET!,
-          code,
+          code: code,
           grant_type: 'authorization_code',
           redirect_uri: redirectUri,
           code_verifier: codeVerifier || '',
@@ -96,7 +103,7 @@ export async function GET(
         body: new URLSearchParams({
           client_id: process.env.YOUTUBE_CLIENT_ID!,
           client_secret: process.env.YOUTUBE_CLIENT_SECRET!,
-          code,
+          code: code,
           grant_type: 'authorization_code',
           redirect_uri: redirectUri,
         }),

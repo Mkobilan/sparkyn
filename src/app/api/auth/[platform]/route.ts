@@ -8,8 +8,14 @@ export async function GET(
 ) {
   const { platform } = await params
   
-  // Get the base URL directly from the current request's origin
-  const { origin: baseUrl } = new URL(request.url)
+  // Get the base URL robustly
+  let baseUrl = ''
+  if (process.env.VERCEL_PROJECT_URL) {
+    baseUrl = process.env.VERCEL_PROJECT_URL.replace(/\/$/, '')
+  } else {
+    const { origin } = new URL(request.url)
+    baseUrl = origin
+  }
 
   const redirectUri = `${baseUrl}/api/auth/callback/${platform}`
 
@@ -30,7 +36,7 @@ export async function GET(
     authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${process.env.META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code`
   } else if (platform === 'tiktok') {
     // TikTok OAuth with PKCE and State
-    const scopes = 'user.info.basic,video.upload'
+    const scopes = 'user.info.basic,video.publish,video.upload'
     const codeVerifier = generateCodeVerifier()
     const codeChallenge = await generateCodeChallenge(codeVerifier)
     const state = Math.random().toString(36).substring(2, 15)
