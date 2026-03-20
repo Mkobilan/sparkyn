@@ -122,15 +122,44 @@ export const aiService = {
       return JSON.parse(match[0]);
 
     } catch (error: any) {
-      console.error("Video script generation failed:", error.message);
-      return {
-        script: `Welcome to our page! Check out our amazing content related to ${description}. We guarantee you will love it!`,
-        imagePrompts: [
-          `Cinematic professional photography for ${description}`,
-          `Engaging beautiful background for ${description}`,
-          `High quality viral aesthetic for ${description}`
-        ]
-      };
+      console.warn("Gemini script generation failed, falling back to Cloudflare Llama-3...", error.message);
+      try {
+        const prompt = `Write a viral 15-second TikTok video script for: ${description}. Theme: ${content}. 
+        Return JSON EXACTLY in this format, with 3 distinct scenes: 
+        { 
+          "script": "The full spoken voiceover script, exactly 3 sentences long.",
+          "imagePrompts": [
+            "Detailed Stable Diffusion image prompt for scene 1",
+            "Detailed Stable Diffusion image prompt for scene 2",
+            "Detailed Stable Diffusion image prompt for scene 3"
+          ] 
+        }`;
+        
+        const cfRes = await fetch(`${CLOUDFLARE_URL}@cf/meta/llama-3-8b-instruct`, {
+            method: 'POST',
+            ...CLOUDFLARE_AUTH,
+            body: JSON.stringify({
+                messages: [
+                    { role: 'system', content: 'You are a social media script expert. Return ONLY valid JSON.' },
+                    { role: 'user', content: prompt }
+                ]
+            })
+        });
+        const cfData = await cfRes.json();
+        const text = cfData.result.response;
+        const match = text.match(/\{[\s\S]*\}/);
+        return JSON.parse(match ? match[0] : text);
+      } catch (cfErr: any) {
+        console.error("Cloudflare script also failed:", cfErr.message);
+        return {
+            script: `Welcome to our page! Check out our amazing content related to ${description}. We guarantee you will love it!`,
+            imagePrompts: [
+              `Cinematic professional photography for ${description}`,
+              `Engaging beautiful background for ${description}`,
+              `High quality viral aesthetic for ${description}`
+            ]
+        };
+      }
     }
   },
 
