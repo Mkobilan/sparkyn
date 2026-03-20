@@ -11,37 +11,21 @@ export const metaService = {
     const endpoint = params.isVideo ? 'videos' : 'photos';
     const url = `https://graph.facebook.com/v19.0/${pageId}/${endpoint}`;
     
-    // Use manual multipart extraction ONLY for images, MP4 boundary corruption inside Next fetch deletes the video post-processing
-    // Ensure base64Image is a healthy length (>1000 bytes) to avoid Meta API "invalid image" 500s
+    // Use native FormData for robust multipart boundary handling
+    // This is required for images to avoid boundary corruption on Vercel
     if (params.base64Image && params.base64Image.length > 1000 && !params.isVideo) {
-      const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-      const filename = params.isVideo ? 'video.mp4' : 'image.jpg';
-      const contentType = params.isVideo ? 'video/mp4' : 'image/jpeg';
+      const formData = new FormData();
       const captionField = params.isVideo ? 'description' : 'message';
+      formData.append(captionField, params.caption);
+      formData.append('access_token', accessToken);
       
-      const payloadPre = Buffer.from(
-        `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="${captionField}"\r\n\r\n` +
-        `${params.caption}\r\n` +
-        `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="access_token"\r\n\r\n` +
-        `${accessToken}\r\n` +
-        `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="source"; filename="${filename}"\r\n` +
-        `Content-Type: ${contentType}\r\n\r\n`
-      );
-      
-      const payloadImage = Buffer.from(params.base64Image, 'base64');
-      const payloadPost = Buffer.from(`\r\n--${boundary}--\r\n`);
-      const body = Buffer.concat([payloadPre, payloadImage, payloadPost]);
+      const buffer = Buffer.from(params.base64Image, 'base64');
+      const blob = new Blob([buffer], { type: 'image/jpeg' });
+      formData.append('source', blob, 'image.jpg');
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
-          'Content-Length': body.length.toString()
-        },
-        body: body,
+        body: formData,
       });
       return await response.json();
     }
