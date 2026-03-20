@@ -90,8 +90,9 @@ export default function DashboardPage() {
       } else {
         alert("Generation failed: " + data.error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
+      alert("System Error: " + (error.message || "The server timed out or failed. Check your connection or upgrade Vercel limits."));
     } finally {
       setIsGenerating(false)
     }
