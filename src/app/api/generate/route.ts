@@ -158,7 +158,8 @@ export async function POST(request: Request) {
             } else {
               console.error('Facebook Publish Error:', pubResult)
               status = 'failed'
-              throw new Error(`Facebook Publish Error: ${pubResult.error?.message || 'Unknown error'}`)
+              const metaErr = pubResult.error?.message || pubResult.error?.error_user_msg || JSON.stringify(pubResult);
+              throw new Error(`Facebook Publish Error: ${metaErr} (Debug: ${JSON.stringify(pubResult)})`)
             }
           } else if (account.platform === 'instagram') {
             console.log(`Publishing now to Instagram: ${account.platform_name}`)
@@ -174,7 +175,8 @@ export async function POST(request: Request) {
             } else {
               console.error('Instagram Publish Error:', pubResult)
               status = 'failed'
-              throw new Error(`Instagram Publish Error: ${pubResult.error?.message || 'Unknown error'}`)
+              const igErr = pubResult.error?.message || pubResult.error?.error_user_msg || JSON.stringify(pubResult);
+              throw new Error(`Instagram Publish Error: ${igErr} (Debug: ${JSON.stringify(pubResult)})`)
             }
           } else {
             console.log(`Simulating publish now to ${account.platform}: ${account.platform_name}`)
