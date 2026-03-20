@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const newGenAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export const aiService = {
   /**
@@ -68,22 +70,28 @@ export const aiService = {
 
   async generateImage(description: string, content: string) {
     try {
-      console.log("Requesting Nano Banana image for:", description);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image" });
+      console.log("Requesting Google AI Studio image (Imagen 3) for:", description);
       const imagePrompt = `Professional social media marketing photography for: ${description}. Context: ${content}. NO TEXT ON IMAGE. Clean, high quality, cinematic lighting, engaging composition.`;
       
-      const result = await model.generateContent(imagePrompt);
+      const response = await newGenAI.models.generateImages({
+        model: 'imagen-3.0-generate-002',
+        prompt: imagePrompt,
+        config: {
+          numberOfImages: 1,
+          outputMimeType: 'image/jpeg',
+          aspectRatio: '1:1'
+        }
+      });
       
-      // Try to parse Base64 inlineData (typical for Gemini Image endpoints)
-      const part = result.response.candidates?.[0]?.content?.parts?.[0];
-      if (part && part.inlineData) {
-        console.log("Successfully generated image via Nano Banana!");
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      const base64Image = response.generatedImages?.[0]?.image?.imageBytes;
+      if (base64Image) {
+        console.log("Successfully generated image via Google AI Studio!");
+        return `data:image/jpeg;base64,${base64Image}`;
       }
       
-      throw new Error(`Nano Banana failed to return image data. Response structure: ${JSON.stringify(result.response)}`);
+      throw new Error(`Google AI Studio failed to return image data. Response structure: ${JSON.stringify(response)}`);
     } catch (error: any) {
-      console.error("Image generation (Nano Banana) failed:", error.message);
+      console.error("Image generation (Google AI Studio) failed:", error.message);
       
       // Since Google's free tier sets the Nano Banana image quota to 0, we fallback to a free public AI image generator!
       const seed = Math.floor(Math.random() * 100000);
