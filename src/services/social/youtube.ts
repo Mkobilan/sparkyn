@@ -27,24 +27,33 @@ export const youtubeService = {
     videoStream.push(null);
 
     // 2. Perform the upload
-    const response = await youtube.videos.insert({
-      part: ['snippet', 'status'],
-      requestBody: {
-        snippet: {
-          title: `${params.title} #Shorts`,
-          description: `${params.description} #Shorts`,
-          categoryId: '22', // People & Blogs
+    try {
+      const response = await youtube.videos.insert({
+        part: ['snippet', 'status'],
+        requestBody: {
+          snippet: {
+            title: `${params.title} #Shorts`,
+            description: `${params.description} #Shorts`,
+            categoryId: '22', // People & Blogs
+          },
+          status: {
+            privacyStatus: 'public',
+            selfDeclaredMadeForKids: false,
+          },
         },
-        status: {
-          privacyStatus: 'public',
-          selfDeclaredMadeForKids: false,
+        media: {
+          body: videoStream,
         },
-      },
-      media: {
-        body: videoStream,
-      },
-    });
+      });
 
-    return response.data;
+      return {
+        id: response.data.id || '',
+        status: response.data.status,
+        url: `https://youtube.com/watch?v=${response.data.id}`
+      };
+    } catch (error: any) {
+      console.error('YouTube publish error:', error.response?.data || error.message);
+      throw error;
+    }
   }
 };

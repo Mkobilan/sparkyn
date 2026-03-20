@@ -124,7 +124,7 @@ export const aiService = {
       const prompt = `Write a viral 15-second TikTok video script for: ${description}. Theme: ${content}. 
       Return JSON EXACTLY in this format, with 3 distinct scenes: 
       { 
-        "script": "The full spoken voiceover script, exactly 3 sentences long.",
+        "script": "The full spoken voiceover script. Must be 3 sentences and UNDER 45 WORDS TOTAL to fit 15 seconds.",
         "imagePrompts": [
           "Cinematic vertical 9:16 photography of [Scene 1 subject], award-winning, highly detailed, 8k, bokeh, professional lighting, no text",
           "Cinematic vertical 9:16 photography of [Scene 2 subject], award-winning, highly detailed, 8k, bokeh, professional lighting, no text",

@@ -98,6 +98,7 @@ export async function POST(request: Request) {
         const scheduledTime = scheduledAt ? new Date(scheduledAt) : new Date();
         let status = 'scheduled';
         let publishedAt = null;
+        let platformPostId = null;
 
         if (publishNow) {
           const pubParams = {
@@ -117,9 +118,10 @@ export async function POST(request: Request) {
                      ? await tiktokService.publishVideo(account.access_token, { videoUrl: mediaUrl, caption: content.caption })
                      : { id: 'simulated_' + Date.now() })));
 
-          if (pubResult.id && !pubResult.error) {
+          if ((pubResult.id || pubResult.data?.id) && !pubResult.error) {
             status = 'published';
             publishedAt = new Date().toISOString();
+            platformPostId = pubResult.id || pubResult.data?.id;
           } else {
             const errDetails = pubResult.error?.message || pubResult.error || JSON.stringify(pubResult);
             throw new Error(`Platform Error: ${errDetails}`);
@@ -137,7 +139,8 @@ export async function POST(request: Request) {
             image_url: mediaUrl,
             scheduled_at: scheduledTime.toISOString(),
             published_at: publishedAt,
-            status: status
+            status: status,
+            platform_post_id: platformPostId
         }).select().single();
 
         if (post) generatedPosts.push(post);
@@ -148,7 +151,16 @@ export async function POST(request: Request) {
     }
 
     if (generatedPosts.length === 0) throw new Error(generationErrors.join(' | '));
-    return NextResponse.json({ success: true, posts: generatedPosts });
+    
+    const publishLinks = generatedPosts
+      .filter(p => p.status === 'published' && p.platform_post_id)
+      .map(p => ({ 
+        platform: p.platforms[0], 
+        url: p.platforms[0] === 'youtube' ? `https://youtube.com/watch?v=${p.platform_post_id}` : null 
+      }))
+      .filter(link => link.url);
+
+    return NextResponse.json({ success: true, posts: generatedPosts, publishLinks });
 
   } catch (error: any) {
     console.error('API 500:', error);
