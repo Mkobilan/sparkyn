@@ -3,6 +3,19 @@ import { Readable } from 'stream';
 
 export const youtubeService = {
   /**
+   * Refreshes the YouTube OAuth2 access token
+   */
+  async refreshAccessToken(refreshToken: string) {
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.YOUTUBE_CLIENT_ID,
+      process.env.YOUTUBE_CLIENT_SECRET
+    );
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+    const { credentials } = await oauth2Client.refreshAccessToken();
+    return credentials;
+  },
+
+  /**
    * Uploads a video to YouTube as a Short
    * YouTube Shorts are regular videos with #Shorts in Title/Description or 9:16 aspect ratio.
    */

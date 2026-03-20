@@ -31,6 +31,32 @@ export async function POST(request: Request) {
 
     for (const account of accounts) {
       console.log(`Processing: ${account.platform_name}`)
+      let currentAccessToken = account.access_token;
+
+      // 0. TOKEN REFRESH LOGIC
+      try {
+        const isExpired = account.expires_at && new Date(account.expires_at).getTime() < Date.now() + 300000; // 5 min buffer
+        if (isExpired && account.refresh_token) {
+          console.log(`Token expired for ${account.platform}. Refreshing...`);
+          if (account.platform === 'youtube') {
+            const credentials = await youtubeService.refreshAccessToken(account.refresh_token);
+            if (credentials.access_token) {
+                currentAccessToken = credentials.access_token;
+                // Update DB
+                await supabase.from('social_accounts').update({
+                    access_token: credentials.access_token,
+                    expires_at: credentials.expiry_date ? new Date(credentials.expiry_date).toISOString() : new Date(Date.now() + 3600 * 1000).toISOString()
+                }).eq('id', account.id);
+                console.log("YouTube token refreshed successfully.");
+            }
+          }
+          // Note: TikTok refresh could be added here similarly if needed
+        }
+      } catch (refreshErr) {
+        console.error("Token refresh failed:", refreshErr);
+        // Continue anyway, maybe the token still works or the error is transient
+      }
+
       try {
         // 1. CONTENT GENERATION
         const content = await aiService.generateContent({
@@ -109,13 +135,13 @@ export async function POST(request: Request) {
           };
 
           const pubResult = account.platform === 'facebook' 
-            ? await metaService.publishToFacebook(account.access_token, account.platform_user_id, pubParams)
+            ? await metaService.publishToFacebook(currentAccessToken, account.platform_user_id, pubParams)
             : (account.platform === 'instagram' 
-               ? await metaService.publishToInstagram(account.access_token, account.platform_user_id, pubParams)
+               ? await metaService.publishToInstagram(currentAccessToken, account.platform_user_id, pubParams)
                : (account.platform === 'youtube'
-                  ? await youtubeService.publishShort(account.access_token, { videoUrl: mediaUrl, title: content.hook, description: content.caption })
+                  ? await youtubeService.publishShort(currentAccessToken, { videoUrl: mediaUrl, title: content.hook, description: content.caption })
                   : (account.platform === 'tiktok'
-                     ? await tiktokService.publishVideo(account.access_token, { videoUrl: mediaUrl, caption: content.caption })
+                     ? await tiktokService.publishVideo(currentAccessToken, { videoUrl: mediaUrl, caption: content.caption })
                      : { id: 'simulated_' + Date.now() })));
 
           if ((pubResult.id || pubResult.data?.id) && !pubResult.error) {

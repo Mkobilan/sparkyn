@@ -32,27 +32,47 @@ export async function POST(request: Request) {
         continue
       }
 
+      let currentAccessToken = account.access_token;
+      // TOKEN REFRESH LOGIC
+      try {
+        const isExpired = account.expires_at && new Date(account.expires_at).getTime() < Date.now() + 300000;
+        if (isExpired && account.refresh_token) {
+          if (platform === 'youtube') {
+            const credentials = await youtubeService.refreshAccessToken(account.refresh_token);
+            if (credentials.access_token) {
+                currentAccessToken = credentials.access_token;
+                await supabase.from('social_accounts').update({
+                    access_token: credentials.access_token,
+                    expires_at: credentials.expiry_date ? new Date(credentials.expiry_date).toISOString() : new Date(Date.now() + 3600 * 1000).toISOString()
+                }).eq('id', account.id);
+            }
+          }
+        }
+      } catch (refreshErr) {
+        console.error("Background token refresh failed:", refreshErr);
+      }
+
       try {
         if (platform === 'facebook') {
           results[platform] = await metaService.publishToFacebook(
-            account.access_token, 
+            currentAccessToken, 
             account.platform_user_id, 
             { imageUrl: post.image_url, caption: post.caption }
           )
         } else if (platform === 'instagram') {
           results[platform] = await metaService.publishToInstagram(
-            account.access_token, 
+            currentAccessToken, 
             account.platform_user_id, 
             { imageUrl: post.image_url, caption: post.caption }
           )
         } else if (platform === 'tiktok') {
           results[platform] = await tiktokService.publishVideo(
-            account.access_token, 
-            { videoUrl: post.image_url, caption: post.caption } // Assuming videoUrl is image_url for now or handled
+            currentAccessToken, 
+            { videoUrl: post.image_url, caption: post.caption } 
           )
         } else if (platform === 'youtube') {
           results[platform] = await youtubeService.publishShort(
-            account.access_token,
+            currentAccessToken,
             { 
               videoUrl: post.image_url, 
               title: post.hook || 'New Post', 
