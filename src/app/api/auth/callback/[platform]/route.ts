@@ -75,6 +75,20 @@ export async function GET(
         console.error('TikTok Token Error:', tokenData.error, tokenData.error_description)
         throw new Error(tokenData.error_description || tokenData.error)
       }
+
+      // Fetch user info for a better UI (display name, avatar)
+      try {
+        const userResp = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=display_name,avatar_url', {
+          headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+        })
+        const userData = await userResp.json()
+        if (userData.data?.user) {
+          tokenData.display_name = userData.data.user.display_name
+          tokenData.avatar_url = userData.data.user.avatar_url
+        }
+      } catch (e) {
+        console.error('Failed to fetch TikTok user info:', e)
+      }
     } else if (platform === 'youtube') {
       const resp = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -97,11 +111,16 @@ export async function GET(
       .upsert({
         user_id: user.id,
         platform,
+        platform_user_id: tokenData.open_id || tokenData.user_id || null, // TikTok uses open_id
+        platform_name: tokenData.display_name || null,
+        metadata: {
+          avatar_url: tokenData.avatar_url || null,
+        },
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token || null,
         expires_at: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString() : null,
         is_active: true,
-      }, { onConflict: 'user_id,platform' })
+      }, { onConflict: 'user_id,platform,platform_user_id' })
 
     if (upsertError) throw upsertError
 
