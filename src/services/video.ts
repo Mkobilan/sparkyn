@@ -22,12 +22,16 @@ export class VideoService {
             
             // 1. Generate Voiceover via Google Translate free neural edge-API
             console.log("Generating Voiceover TTS...");
-            const audioChunks = await googleTTS.getAllAudioBase64(script, {
+            // Sanitize script of emojis or strange characters that break Google TTS
+            const safeScript = script.replace(/[^\x00-\x7F]/g, "").trim() || "Enjoy the video.";
+            const audioChunks = await googleTTS.getAllAudioBase64(safeScript, {
                 lang: 'en',
                 slow: false,
                 host: 'https://translate.google.com',
             });
-            const fullAudioBuffer = Buffer.concat(audioChunks.map(c => Buffer.from(c.base64, 'base64')));
+            const validChunks = audioChunks.filter(c => c && c.base64);
+            if (validChunks.length === 0) throw new Error("Google TTS rejected the voice script generation.");
+            const fullAudioBuffer = Buffer.concat(validChunks.map(c => Buffer.from(c.base64, 'base64')));
             await fs.writeFile(audioPath, fullAudioBuffer);
             
             // 2. Save Images and Build FFmpeg Concat file
@@ -36,7 +40,14 @@ export class VideoService {
             const SLIDE_DURATION = 4;
             
             for (let i = 0; i < imagesBase64.length; i++) {
-                const imageBuffer = Buffer.from(imagesBase64[i].split(',')[1], 'base64');
+                let imageBuffer: Buffer;
+                if (imagesBase64[i].startsWith('http')) {
+                    const res = await fetch(imagesBase64[i]);
+                    imageBuffer = Buffer.from(await res.arrayBuffer());
+                } else {
+                    const base64Data = imagesBase64[i].includes(',') ? imagesBase64[i].split(',')[1] : imagesBase64[i];
+                    imageBuffer = Buffer.from(base64Data, 'base64');
+                }
                 const imagePath = path.join(tmpDir, `img_${jobId}_${i}.jpg`);
                 await fs.writeFile(imagePath, imageBuffer);
                 
