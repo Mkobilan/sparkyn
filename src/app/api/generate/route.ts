@@ -173,6 +173,7 @@ export async function POST(request: Request) {
 
         if (post) {
             (post as any)._channelTitle = channelTitle;
+            (post as any)._mediaSize = mediaUrl?.startsWith('data:video') ? Math.round(mediaUrl.length * 0.75 / 1024) + ' KB' : null;
             generatedPosts.push(post);
         }
       } catch (loopErr: any) {
@@ -201,7 +202,7 @@ export async function POST(request: Request) {
         errors: generationErrors,
         postCount: generatedPosts.length,
         hasLinks: publishLinks.length > 0,
-        videoSizeEstimate: mediaUrl?.startsWith('data:video') ? Math.round(mediaUrl.length * 0.75 / 1024) + ' KB' : null
+        mediaSizes: generatedPosts.map(p => (p as any)._mediaSize)
       }
     });
 
