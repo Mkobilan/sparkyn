@@ -10,17 +10,31 @@ export const metaService = {
     const url = `https://graph.facebook.com/v19.0/${pageId}/photos`;
     
     if (params.base64Image) {
-      const formData = new FormData();
-      formData.append('message', params.caption);
-      formData.append('access_token', accessToken);
+      const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
       
-      const buffer = Buffer.from(params.base64Image, 'base64');
-      const blob = new Blob([buffer], { type: 'image/jpeg' });
-      formData.append('source', blob, 'image.jpg');
+      const payloadPre = Buffer.from(
+        `--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="message"\r\n\r\n` +
+        `${params.caption}\r\n` +
+        `--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="access_token"\r\n\r\n` +
+        `${accessToken}\r\n` +
+        `--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="source"; filename="image.jpg"\r\n` +
+        `Content-Type: image/jpeg\r\n\r\n`
+      );
+      
+      const payloadImage = Buffer.from(params.base64Image, 'base64');
+      const payloadPost = Buffer.from(`\r\n--${boundary}--\r\n`);
+      const body = Buffer.concat([payloadPre, payloadImage, payloadPost]);
 
       const response = await fetch(url, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': body.length.toString()
+        },
+        body: body,
       });
       return await response.json();
     }
