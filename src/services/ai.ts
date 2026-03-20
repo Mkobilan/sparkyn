@@ -265,7 +265,7 @@ export const aiService = {
       
       // Secondary Fallback if Cloudflare blocks a word: Default to Pollinations API
       const seed = Math.floor(Math.random() * 1000000);
-      const encodedPrompt = encodeURIComponent(`Breathtaking photography: ${scrubbedDesc}. ${content}`.slice(0, 300));
+      const encodedPrompt = encodeURIComponent(`Breathtaking photography: ${scrubbedDesc}`.slice(0, 100));
       const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=${width}&height=${height}&nologo=true&model=flux`;
       
       console.log("Falling back to Public Pollinations FLUX:", fluxUrl);

@@ -110,9 +110,18 @@ export async function POST(request: Request) {
           } else {
             // Fetch from external URL (Pollinations Fallback)
             const mediaRes = await fetch(mediaUrl);
+            if (!mediaRes.ok) {
+                const errText = await mediaRes.text();
+                throw new Error(`External Image Fetch Failed (${mediaRes.status}): ${errText.slice(0, 100)}`);
+            }
             const arrayBuffer = await mediaRes.arrayBuffer();
             bytes = Buffer.from(arrayBuffer);
             contentType = mediaRes.headers.get('content-type') || 'image/jpeg';
+            
+            // Safety Check: Ensure we didn't capture a JSON error message as an image
+            if (contentType.includes('application/json') || bytes.length < 1000) {
+                throw new Error(`External Image Fetch returned invalid data: ${contentType}`);
+            }
           }
           
           console.log(`Media captured. Byte size: ${bytes.length}`);
