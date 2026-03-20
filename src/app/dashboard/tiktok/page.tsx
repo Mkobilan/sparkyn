@@ -47,14 +47,14 @@ export default function TikTokDashboard() {
     fetchAccounts()
   }, [])
 
-  const handleGenerate = async (accountId: string, publishNow: boolean = false) => {
+  const handleGenerate = async (accountId: string, publishNow: boolean = false, isVideo: boolean = false) => {
     setGeneratingId(accountId)
     try {
       const scheduledAt = scheduledTimes[accountId]
       const response = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, publishNow, scheduledAt })
+        body: JSON.stringify({ accountId, publishNow, scheduledAt, isVideo })
       })
       const data = await response.json()
       if (data.success) {
@@ -230,25 +230,44 @@ export default function TikTokDashboard() {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
-                  <button 
-                    onClick={() => handleGenerate(account.id, true)}
-                    disabled={!!generatingId}
-                    className="flex-1 btn btn-primary bg-primary border-primary hover:bg-primary/90 text-background font-bold gap-2 py-4 rounded-xl shadow-[0_4px_14px_0_rgba(0,242,234,0.39)]"
-                  >
-                    {generatingId === account.id ? <Loader2 className="w-4 h-4 animate-spin text-background" /> : <Sparkles className="w-4 h-4 text-background" />}
-                    Publish Now
-                  </button>
-                  <button 
-                    onClick={() => handleGenerate(account.id, false)}
-                    disabled={!!generatingId}
-                    className="flex-1 btn btn-outline border-primary/20 hover:bg-primary/10 text-primary font-bold gap-2 py-4 rounded-xl"
-                  >
-                    Schedule AI
-                  </button>
-                  <button onClick={() => handleEditClick(account)} className={`btn w-14 h-14 p-0 rounded-xl border ${editingId === account.id ? 'bg-primary/10 border-primary text-primary' : 'btn-ghost border-border/50 text-muted-foreground'}`}>
-                    <Settings2 className="w-5 h-5 cursor-pointer" />
-                  </button>
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => handleGenerate(account.id, true, false)}
+                      disabled={!!generatingId}
+                      className="flex-1 btn btn-primary font-bold gap-2 py-3 rounded-xl shadow-lg"
+                    >
+                      {generatingId === account.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      Publish Image
+                    </button>
+                    <button 
+                      onClick={() => handleGenerate(account.id, false, false)}
+                      disabled={!!generatingId}
+                      className="flex-1 btn btn-outline border-primary/20 hover:bg-primary/10 text-primary font-bold gap-2 py-3 rounded-xl"
+                    >
+                      Schedule AI Image
+                    </button>
+                  </div>
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => handleGenerate(account.id, true, true)}
+                      disabled={!!generatingId}
+                      className="flex-1 btn bg-primary border-primary hover:bg-primary/90 text-background font-bold gap-2 py-3 rounded-xl shadow-[0_4px_14px_0_rgba(0,242,234,0.39)]"
+                    >
+                      {generatingId === account.id ? <Loader2 className="w-4 h-4 animate-spin text-background" /> : <Sparkles className="w-4 h-4 text-background" />}
+                      Publish Video
+                    </button>
+                    <button 
+                      onClick={() => handleGenerate(account.id, false, true)}
+                      disabled={!!generatingId}
+                      className="flex-1 btn btn-outline border-primary/20 hover:bg-primary/10 text-primary font-bold gap-2 py-3 rounded-xl"
+                    >
+                      Schedule Video
+                    </button>
+                    <button onClick={() => handleEditClick(account)} className={`btn w-12 h-12 p-0 rounded-xl border ${editingId === account.id ? 'bg-primary/10 border-primary text-primary' : 'btn-ghost border-border/50 text-muted-foreground'}`}>
+                      <Settings2 className="w-5 h-5 cursor-pointer" />
+                    </button>
+                  </div>
                 </div>
 
                 {editingId === account.id && (
