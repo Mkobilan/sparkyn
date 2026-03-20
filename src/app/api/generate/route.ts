@@ -64,8 +64,37 @@ export async function POST(request: Request) {
           continue
         }
 
-        // 3. Generate image (placeholder for now)
-        const imageUrl = await aiService.generateImage(profile.business_description, content.caption)
+        // 3. Generate image (base64)
+        let imageUrl = await aiService.generateImage(profile.business_description, content.caption)
+
+        // Upload to Supabase to convert to public URL, as Meta API requires it.
+        if (imageUrl.startsWith('data:image')) {
+          console.log(`Uploading generated base64 image to Supabase...`)
+          const contentType = imageUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
+          const base64Data = imageUrl.split(',')[1];
+          const buffer = Buffer.from(base64Data, 'base64');
+          const ext = contentType === 'image/png' ? 'png' : 'jpg';
+          const filename = `generation_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('generated-images')
+            .upload(filename, buffer, {
+              contentType: contentType,
+              upsert: false
+            });
+
+          if (uploadError) {
+            console.error('Failed to upload image to Supabase:', uploadError);
+            throw new Error(`Storage Error: ${uploadError.message}`);
+          }
+
+          const { data: publicUrlData } = supabase.storage
+            .from('generated-images')
+            .getPublicUrl(filename);
+            
+          imageUrl = publicUrlData.publicUrl;
+          console.log(`Successfully uploaded image to Supabase: ${imageUrl}`)
+        }
 
         // 4. Store in scheduled_posts
         const scheduledTime = scheduledAt ? new Date(scheduledAt) : new Date()
@@ -90,6 +119,7 @@ export async function POST(request: Request) {
             } else {
               console.error('Facebook Publish Error:', pubResult)
               status = 'failed'
+              throw new Error(`Facebook Publish Error: ${pubResult.error?.message || 'Unknown error'}`)
             }
           } else if (account.platform === 'instagram') {
             console.log(`Publishing now to Instagram: ${account.platform_name}`)
@@ -104,6 +134,7 @@ export async function POST(request: Request) {
             } else {
               console.error('Instagram Publish Error:', pubResult)
               status = 'failed'
+              throw new Error(`Instagram Publish Error: ${pubResult.error?.message || 'Unknown error'}`)
             }
           } else {
             console.log(`Simulating publish now to ${account.platform}: ${account.platform_name}`)
@@ -142,9 +173,9 @@ export async function POST(request: Request) {
       }
     }
 
-    if (generatedPosts.length === 0) {
+    if (generatedPosts.length === 0 || generationErrors.length > 0) {
       return NextResponse.json({ 
-        error: `Failed to generate content. Errors: ${generationErrors.join(' | ')} (Check if GEMINI_API_KEY is set in Vercel)` 
+        error: `Errors occurred: ${generationErrors.join(' | ')}` 
       }, { status: 500 })
     }
 
