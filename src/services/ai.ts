@@ -43,24 +43,37 @@ export const aiService = {
       - YouTube: Focus on catchy titles and educational/entertaining value (Shorts style).
     `;
 
-    const tryGenerate = async (modelName: string) => {
-      const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        generationConfig: {
-          responseMimeType: "application/json",
+    const tryGenerate = async (modelName: string): Promise<any> => {
+      try {
+        const model = genAI.getGenerativeModel({ 
+          model: modelName,
+          generationConfig: {
+            responseMimeType: "application/json",
+          }
+        });
+        const result = await model.generateContent(prompt);
+        return JSON.parse(result.response.text());
+      } catch (e: any) {
+        if (e.message?.includes('429')) {
+           console.log("Rate limited (429). Retrying in 2 seconds...");
+           await new Promise(r => setTimeout(r, 2000));
+           const model = genAI.getGenerativeModel({ model: modelName });
+           const result = await model.generateContent(prompt);
+           let t = result.response.text().trim();
+           if (t.startsWith("```json")) t = t.replace(/```json/g, "").replace(/```/g, "").trim();
+           return JSON.parse(t);
         }
-      });
-      const result = await model.generateContent(prompt);
-      return JSON.parse(result.response.text());
+        throw e;
+      }
     }
 
     try {
-      return await tryGenerate("gemini-2.5-flash");
+      // 1.5-Flash is significantly more stable and has higher RPM for free users than 2.5 experimental
+      return await tryGenerate("gemini-1.5-flash");
     } catch (e: any) {
-      console.error("Primary AI model gemini-2.5-flash failed:", e.message);
-      // Let's try WITHOUT the JSON mime type enforcement, just in case 2.5 doesn't like it on v1beta yet
-      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      const result = await fallbackModel.generateContent(prompt + "\n\nCRITICAL: RETURN ONLY VALID JSON. DO NOT USE MARKDOWN BACKTICKS.");
+      console.error("Primary AI model failed:", e.message);
+      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await fallbackModel.generateContent(prompt + "\n\nCRITICAL: RETURN ONLY VALID JSON.");
       let text = result.response.text().trim();
       if (text.startsWith("```json")) text = text.replace(/```json/g, "").replace(/```/g, "").trim();
       else if (text.startsWith("```")) text = text.replace(/```/g, "").trim();
