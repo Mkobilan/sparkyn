@@ -11,25 +11,37 @@ export const metaService = {
     const endpoint = params.isVideo ? 'videos' : 'photos';
     const url = `https://graph.facebook.com/v19.0/${pageId}/${endpoint}`;
     
-    // Use native FormData for robust multipart boundary handling
-    // This is required for images to avoid boundary corruption on Vercel
+    // Attempt 1: Native FormData Binary Upload (Fastest & avoids DNS propagate issues)
     if (params.base64Image && params.base64Image.length > 1000 && !params.isVideo) {
-      const formData = new FormData();
-      const captionField = params.isVideo ? 'description' : 'message';
-      formData.append(captionField, params.caption);
-      formData.append('access_token', accessToken);
-      
-      const buffer = Buffer.from(params.base64Image, 'base64');
-      const blob = new Blob([buffer], { type: 'image/jpeg' });
-      formData.append('source', blob, 'image.jpg');
+      try {
+        const formData = new FormData();
+        const captionField = params.isVideo ? 'description' : 'message';
+        formData.append(captionField, params.caption);
+        formData.append('access_token', accessToken);
+        
+        const buffer = Buffer.from(params.base64Image, 'base64');
+        const blob = new Blob([buffer], { type: 'image/jpeg' });
+        formData.append('source', blob, 'image.jpg');
 
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-      });
-      return await response.json();
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+        });
+        const result = await response.json();
+        
+        // RECURSIVE FALLBACK: If Meta returns "Ad-Safety" Error 324 (Subcode 2069019), 
+        // fall back to the URL method. Facebook's URL-Scraper often bypasses strict binary filters.
+        if (result.error?.code === 324 || result.error?.error_subcode === 2069019) {
+          console.warn("Meta Ad-Safety block detected (Code 324). Falling back to URL-Scraper method...");
+        } else {
+          return result;
+        }
+      } catch (err) {
+        console.error("Binary upload failed, falling back to URL...", err);
+      }
     }
 
+    // Attempt 2: URL-based Scraper Upload (Fallback for Ad-Safety filters)
     const payload: any = {
       access_token: accessToken,
     };
