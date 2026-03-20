@@ -108,29 +108,42 @@ export const aiService = {
 
   async generateImage(description: string, content: string) {
     try {
-      console.log("Requesting FLUX.1 State-of-the-Art AI image for:", description);
+      console.log("Requesting Cloudflare Edge FLUX.1 AI image for:", description);
       const imagePrompt = `Breathtaking, hyper-realistic, award-winning 8k photography for: ${description}. Context: ${content}. NO TEXT ON IMAGE. Cinematic lighting, perfect anatomy, ultra-detailed, depth of field.`;
       
-      // We use Pollinations.ai entirely for free as our primary FLUX generator.
-      // We request exactly 768x1344 (9:16 vertical) to ensure ultra-fast generation times below 5s for Vercel timeouts
-      const seed = Math.floor(Math.random() * 1000000);
-      const encodedPrompt = encodeURIComponent(imagePrompt.slice(0, 800));
-      const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=768&height=1344&nologo=true&model=flux`;
-      
-      console.log("Downloading FLUX.1 image from stream:", fluxUrl);
-      
-      // We stream the image directly back into an ArrayBuffer so it remains completely identical to our internal proxy endpoints
-      const response = await fetch(fluxUrl);
-      if (!response.ok) throw new Error("Failed to fetch Flux image buffer.");
-      
+      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+      const token = process.env.CLOUDFLARE_API_TOKEN;
+      if (!accountId || !token) throw new Error("Cloudflare credentials missing.");
+
+      // Utilize the Private Cloudflare Edge Network for guaranteed FLUX uptime and rendering
+      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-1-schnell`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt: imagePrompt })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Cloudflare Flux error: ${response.statusText}`);
+      }
+
       const arrayBuffer = await response.arrayBuffer();
       const base64Image = Buffer.from(arrayBuffer).toString('base64');
       
       return `data:image/jpeg;base64,${base64Image}`;
       
     } catch (error: any) {
-      console.error("FLUX Image generation failed:", error.message);
-      throw new Error(`Visual Generator Failure: ${error.message}`);
+      console.error("Cloudflare FLUX Image generation failed:", error.message);
+      
+      // Secondary Fallback if Cloudflare blocks a word: Default to Pollinations API
+      const seed = Math.floor(Math.random() * 1000000);
+      const encodedPrompt = encodeURIComponent(`Breathtaking photography: ${description}. ${content}`.slice(0, 800));
+      const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=768&height=1344&nologo=true&model=flux`;
+      
+      console.log("Falling back to Public Pollinations FLUX:", fluxUrl);
+      return fluxUrl;
     }
   }
 };
