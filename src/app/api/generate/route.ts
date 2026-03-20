@@ -99,8 +99,9 @@ export async function POST(request: Request) {
             .from('generated-images')
             .getPublicUrl(filename);
             
-          imageUrl = publicUrlData.publicUrl;
-          console.log(`Successfully uploaded image to Supabase: ${imageUrl}`)
+          const appOrigin = new URL(request.url).origin;
+          imageUrl = `${appOrigin}/api/public-image?url=${encodeURIComponent(publicUrlData.publicUrl)}`;
+          console.log(`Successfully uploaded image to Supabase and proxied: ${imageUrl}`)
           
           // Wait 2000ms to allow Supabase global CDN to propagate before Facebook eagerly fetches it
           await new Promise(resolve => setTimeout(resolve, 2000));
