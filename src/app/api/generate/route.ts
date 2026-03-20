@@ -144,7 +144,8 @@ export async function POST(request: Request) {
             const pubResult = await metaService.publishToFacebook(account.access_token, account.platform_user_id, {
               imageUrl: mediaUrl,
               caption: `${content.hook}\n\n${content.caption}\n\n${content.cta}\n\n${content.hashtags}`,
-              base64Image: rawBase64ForMeta
+              base64Image: rawBase64ForMeta,
+              isVideo: isVideo
             })
             
             if (pubResult.id) {
@@ -159,7 +160,8 @@ export async function POST(request: Request) {
             console.log(`Publishing now to Instagram: ${account.platform_name}`)
             const pubResult = await metaService.publishToInstagram(account.access_token, account.platform_user_id, {
               imageUrl: mediaUrl,
-              caption: `${content.hook}\n\n${content.caption}\n\n${content.cta}\n\n${content.hashtags}`
+              caption: `${content.hook}\n\n${content.caption}\n\n${content.cta}\n\n${content.hashtags}`,
+              isVideo: isVideo
             })
             
             if (pubResult.id) {
