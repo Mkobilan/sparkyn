@@ -186,7 +186,16 @@ export async function POST(request: Request) {
       }))
       .filter(link => link.url);
 
-    return NextResponse.json({ success: true, posts: generatedPosts, publishLinks });
+    return NextResponse.json({ 
+      success: true, 
+      posts: generatedPosts, 
+      publishLinks,
+      debug: {
+        errors: generationErrors,
+        postCount: generatedPosts.length,
+        hasLinks: publishLinks.length > 0
+      }
+    });
 
   } catch (error: any) {
     console.error('API 500:', error);

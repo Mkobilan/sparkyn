@@ -178,6 +178,20 @@ export default function DashboardPage() {
                 </div>
               )}
 
+              {lastResults.debug && !lastResults.publishLinks?.length && (
+                <div className="bg-muted/50 p-4 rounded-xl border border-border text-[10px] font-mono space-y-2">
+                  <p className="text-muted-foreground uppercase font-bold tracking-widest">Debug Console</p>
+                  <pre className="whitespace-pre-wrap">
+                    {JSON.stringify(lastResults.debug, null, 2)}
+                  </pre>
+                  {lastResults.posts?.length > 0 && (
+                    <p className="text-success">
+                      Generated {lastResults.posts.length} record(s).
+                    </p>
+                  )}
+                </div>
+              )}
+
               <button 
                 onClick={() => setLastResults(null)}
                 className="btn btn-primary w-full h-12 font-bold shadow-lg"
