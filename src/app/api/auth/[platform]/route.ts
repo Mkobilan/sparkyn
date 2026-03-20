@@ -8,16 +8,8 @@ export async function GET(
 ) {
   const { platform } = await params
   
-  // Robust baseUrl construction
-  let baseUrl = 'http://localhost:3000'
-  if (process.env.VERCEL_PROJECT_URL) {
-    baseUrl = process.env.VERCEL_PROJECT_URL.startsWith('http') 
-      ? process.env.VERCEL_PROJECT_URL 
-      : `https://${process.env.VERCEL_PROJECT_URL}`
-  } else if (process.env.VERCEL_URL) {
-    baseUrl = `https://${process.env.VERCEL_URL}`
-  }
-  baseUrl = baseUrl.replace(/\/$/, '')
+  // Get the base URL directly from the current request's origin
+  const { origin: baseUrl } = new URL(request.url)
 
   const redirectUri = `${baseUrl}/api/auth/callback/${platform}`
 
