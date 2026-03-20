@@ -72,13 +72,16 @@ export async function POST(request: Request) {
           console.log(`Uploading generated base64 image to Supabase...`)
           const contentType = imageUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
           const base64Data = imageUrl.split(',')[1];
+          // Critical fix: Next.js/undici fetch breaks when passing Node Buffers directly to Supabase storage.
+          // We must wrap it in a standard Web Blob.
           const buffer = Buffer.from(base64Data, 'base64');
+          const blob = new Blob([buffer], { type: contentType });
           const ext = contentType === 'image/png' ? 'png' : 'jpg';
           const filename = `generation_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('generated-images')
-            .upload(filename, buffer, {
+            .upload(filename, blob, {
               contentType: contentType,
               upsert: false
             });
