@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
-    const { accountId, publishNow, scheduledAt } = await request.json().catch(() => ({}));
+    const { accountId, publishNow, scheduledAt, isVideo } = await request.json().catch(() => ({}));
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     
@@ -72,8 +72,8 @@ export async function POST(request: Request) {
         let mediaUrl = '';
         let rawBase64ForMeta: string | undefined = undefined;
 
-        if (account.platform === 'tiktok' || account.platform === 'instagramreels') {
-             console.log(`TikTok/Reels detected for ${account.platform_name}! Initializing native Vercel FFmpeg compiler...`);
+        if (account.platform === 'tiktok' || account.platform === 'instagramreels' || isVideo) {
+             console.log(`Shorts/Video generation triggered for ${account.platform_name}! Initializing Vercel FFmpeg compiler...`);
              const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, content.caption);
              const imagesBase64 = [];
              for (const prompt of imagePrompts) {

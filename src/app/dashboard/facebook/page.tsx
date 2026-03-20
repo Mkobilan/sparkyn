@@ -57,14 +57,14 @@ export default function FacebookDashboard() {
     fetchPages()
   }, [])
 
-  const handleGenerate = async (accountId: string, publishNow: boolean = false) => {
+  const handleGenerate = async (accountId: string, publishNow: boolean = false, isVideo: boolean = false) => {
     setGeneratingId(accountId)
     try {
       const scheduledAt = scheduledTimes[accountId]
       const response = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, publishNow, scheduledAt })
+        body: JSON.stringify({ accountId, publishNow, scheduledAt, isVideo })
       })
       const data = await response.json()
       if (data.success) {
@@ -210,25 +210,44 @@ export default function FacebookDashboard() {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
-                  <button 
-                    onClick={() => handleGenerate(page.id, true)}
-                    disabled={!!generatingId}
-                    className="flex-1 btn btn-primary font-bold gap-2 py-4 rounded-xl shadow-lg"
-                  >
-                    {generatingId === page.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Publish Now
-                  </button>
-                  <button 
-                    onClick={() => handleGenerate(page.id, false)}
-                    disabled={!!generatingId}
-                    className="flex-1 btn btn-outline border-[#1877F2]/20 hover:bg-[#1877F2]/10 text-[#1877F2] font-bold gap-2 py-4 rounded-xl"
-                  >
-                    Schedule AI
-                  </button>
-                  <button onClick={() => handleEditClick(page)} className={`btn btn-ghost w-14 h-14 p-0 rounded-xl border ${editingId === page.id ? 'bg-primary/10 border-primary text-primary' : 'border-border/50 text-muted-foreground'}`}>
-                    <Settings2 className="w-5 h-5 cursor-pointer" />
-                  </button>
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => handleGenerate(page.id, true, false)}
+                      disabled={!!generatingId}
+                      className="flex-1 btn btn-primary font-bold gap-2 py-3 rounded-xl shadow-lg"
+                    >
+                      {generatingId === page.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      Publish Image
+                    </button>
+                    <button 
+                      onClick={() => handleGenerate(page.id, false, false)}
+                      disabled={!!generatingId}
+                      className="flex-1 btn btn-outline border-[#1877F2]/20 hover:bg-[#1877F2]/10 text-[#1877F2] font-bold gap-2 py-3 rounded-xl"
+                    >
+                      Schedule AI Image
+                    </button>
+                  </div>
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => handleGenerate(page.id, true, true)}
+                      disabled={!!generatingId}
+                      className="flex-1 btn bg-[#1877F2] hover:bg-[#1877F2]/90 text-white font-bold gap-2 py-3 rounded-xl shadow-lg"
+                    >
+                      {generatingId === page.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      Publish Video
+                    </button>
+                    <button 
+                      onClick={() => handleGenerate(page.id, false, true)}
+                      disabled={!!generatingId}
+                      className="flex-1 btn btn-outline border-[#1877F2]/20 hover:bg-[#1877F2]/10 text-[#1877F2] font-bold gap-2 py-3 rounded-xl"
+                    >
+                      Schedule Video
+                    </button>
+                    <button onClick={() => handleEditClick(page)} className={`btn btn-ghost w-12 h-12 p-0 rounded-xl border ${editingId === page.id ? 'bg-primary/10 border-primary text-primary' : 'border-border/50 text-muted-foreground'}`}>
+                      <Settings2 className="w-5 h-5 cursor-pointer" />
+                    </button>
+                  </div>
                 </div>
 
                 {editingId === page.id && (
