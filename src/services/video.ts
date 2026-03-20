@@ -21,6 +21,7 @@ export class VideoService {
             const outputPath = path.join(tmpDir, `out_${jobId}.mp4`);
             
             // 1. Generate Voiceover via Google Translate free neural edge-API
+            const safeScript = script.replace(/[^\x00-\x7F]/g, "").trim() || "Enjoy the video.";
             try {
                 const audioChunks = await googleTTS.getAllAudioBase64(safeScript, {
                     lang: 'en',
