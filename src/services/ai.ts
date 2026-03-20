@@ -166,9 +166,23 @@ export const aiService = {
             })
         });
         const cfData = await cfRes.json();
-        const text = cfData.result.response;
+        const text = cfData.result.response || cfData.result || "";
         const match = text.match(/\{[\s\S]*\}/);
-        return JSON.parse(match ? match[0] : text);
+        const jsonStr = match ? match[0] : text;
+        
+        try {
+          return JSON.parse(jsonStr);
+        } catch (parseErr: any) {
+          console.error("Llama-3 script JSON parse failure:", parseErr.message);
+          return {
+              script: `Welcome to our page! Check out our amazing content related to ${description}.`,
+              imagePrompts: [
+                `Cinematic professional photography for ${description}`,
+                `Engaging background for ${description}`,
+                `High quality aesthetic for ${description}`
+              ]
+          };
+        }
       } catch (cfErr: any) {
         console.error("Cloudflare script also failed:", cfErr.message);
         return {
