@@ -1,8 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GoogleGenAI } from "@google/genai";
+import { createClient } from '../lib/supabase-browser'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const newGenAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export const aiService = {
   /**

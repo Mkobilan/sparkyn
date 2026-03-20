@@ -77,8 +77,11 @@ export default function FacebookDashboard() {
         setErrorModal(`Failed: ${data.error || 'Unknown error'}`)
       }
     } catch (error: any) {
-      console.error(error)
-      setErrorModal(`Network error: ${error.message}`)
+      console.error("Dashboard handleGenerate Error:", error)
+      const msg = error.message || "Unknown Network Exception"
+      setErrorModal(`Network error: ${msg}`)
+      // High-visibility fallback for production debugging
+      if (typeof window !== 'undefined') window.alert(`CRITICAL ERROR: ${msg}`)
     } finally {
       setGeneratingId(null)
     }
@@ -137,8 +140,8 @@ export default function FacebookDashboard() {
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#1877F2]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
 
         {errorModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-            <div className="bg-background border border-border p-6 rounded-3xl max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in duration-200">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[9999] flex items-center justify-center p-4">
+            <div className="bg-[#0a0a0a] border border-red-500/50 p-6 rounded-3xl max-w-xl w-full shadow-[0_0_50px_rgba(239,68,68,0.3)] relative animate-in fade-in zoom-in duration-200">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-xl font-extrabold text-red-500 flex items-center gap-3">
                   <div className="p-2 bg-red-500/10 rounded-full"><AlertCircle className="w-5 h-5" /></div>

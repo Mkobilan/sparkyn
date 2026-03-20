@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase'
-import { aiService } from '@/services/ai'
-import { metaService } from '@/services/social/meta'
+import { createClient } from '../../lib/supabase'
+import { aiService } from '../../services/ai'
+import { metaService } from '../../services/social/meta'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
