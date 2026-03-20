@@ -129,8 +129,18 @@ export const aiService = {
         throw new Error(`Cloudflare Flux error: ${response.statusText}`);
       }
 
-      const arrayBuffer = await response.arrayBuffer();
-      const base64Image = Buffer.from(arrayBuffer).toString('base64');
+      // Cloudflare Models periodically switch between Raw Binary streams and Encapsulated JSON payloads.
+      // We sniff the physical response header to guarantee we don't accidentally encode a JSON string as a JPEG.
+      const contentType = response.headers.get("Content-Type") || "";
+      let base64Image = "";
+      
+      if (contentType.includes("application/json")) {
+          const json = await response.json();
+          base64Image = json.result?.image || json.image || "";
+      } else {
+          const arrayBuffer = await response.arrayBuffer();
+          base64Image = Buffer.from(arrayBuffer).toString('base64');
+      }
       
       return `data:image/jpeg;base64,${base64Image}`;
       
