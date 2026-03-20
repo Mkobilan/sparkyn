@@ -65,7 +65,11 @@ export async function POST(request: Request) {
         }
 
         // 3. Generate image (base64)
-        let imageUrl = await aiService.generateImage(profile.business_description, content.caption)
+        const accountDescription = account.metadata?.description || profile.business_description;
+        const accountIndustry = account.metadata?.industry || profile.industry;
+        const imageContext = `${accountIndustry} business - ${accountDescription}`;
+
+        let imageUrl = await aiService.generateImage(imageContext, content.caption)
         let rawBase64ForMeta: string | undefined = undefined;
 
         // Upload to Supabase to convert to public URL, as Meta API requires it.
