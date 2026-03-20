@@ -197,10 +197,13 @@ export const aiService = {
     }
   },
 
-  async generateImage(description: string, content: string) {
+  async generateImage(description: string, content: string, width: number = 1024, height: number = 1024) {
     try {
-      console.log("Requesting Cloudflare Edge FLUX.1 AI image for:", description);
-      const imagePrompt = `Breathtaking, hyper-realistic, award-winning 8k photography for: ${description}. Context: ${content}. NO TEXT ON IMAGE. Cinematic lighting, perfect anatomy, ultra-detailed, depth of field.`;
+      console.log(`Requesting Cloudflare Edge FLUX.1 AI image (${width}x${height}) for:`, description);
+      
+      // Inject safety keywords for Wellness/Business prompts to bypass Meta's automated "Ad-Safety" rejectors (Error 324)
+      const safetyKeywords = "Organic lifestyle photography, warm and inviting, natural lighting, high-quality professional shot, no before/after, no medical icons, no claims.";
+      const imagePrompt = `Breathtaking, hyper-realistic, award-winning 8k photography for: ${description}. Context: ${content}. ${safetyKeywords} NO TEXT ON IMAGE. Cinematic lighting, perfect anatomy, ultra-detailed, depth of field.`;
       
       const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
       const token = process.env.CLOUDFLARE_API_TOKEN;
@@ -213,7 +216,11 @@ export const aiService = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ prompt: imagePrompt })
+        body: JSON.stringify({ 
+          prompt: imagePrompt,
+          width: width,
+          height: height
+        })
       });
 
       if (!response.ok) {
@@ -251,7 +258,7 @@ export const aiService = {
       // Secondary Fallback if Cloudflare blocks a word: Default to Pollinations API
       const seed = Math.floor(Math.random() * 1000000);
       const encodedPrompt = encodeURIComponent(`Breathtaking photography: ${description}. ${content}`.slice(0, 800));
-      const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=768&height=1344&nologo=true&model=flux`;
+      const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=${width}&height=${height}&nologo=true&model=flux`;
       
       console.log("Falling back to Public Pollinations FLUX:", fluxUrl);
       

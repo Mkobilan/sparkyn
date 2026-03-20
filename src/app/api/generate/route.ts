@@ -80,8 +80,9 @@ export async function POST(request: Request) {
              
              console.time(`ImagesFetch-${account.id}`);
              // High-throughput parallel evaluation to defeat strict 10s Serverless Hobby execution timeouts
+             // Use 768x1344 (9:16) for videos
              const imagePromises = imagePrompts.map(prompt => 
-                 aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption)
+                 aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption, 768, 1344)
              );
              const imagesBase64 = await Promise.all(imagePromises);
              console.timeEnd(`ImagesFetch-${account.id}`);
@@ -90,7 +91,8 @@ export async function POST(request: Request) {
              mediaUrl = await videoService.compileShortVideo(imagesBase64, script);
              console.timeEnd(`VideoTotal-${account.id}`);
         } else {
-             mediaUrl = await aiService.generateImage(imageContext, content.caption);
+             // Use 1024x1024 (1:1) for standard images to improve Meta Ad-Safety approval (Error 324 fix)
+             mediaUrl = await aiService.generateImage(imageContext, content.caption, 1024, 1024);
         }
 
         // Upload to Supabase to convert to public URL, as Meta API requires it.
