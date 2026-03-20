@@ -33,19 +33,14 @@ export const youtubeService = {
     });
 
     // 1. Download video from URL or parse Data URI
-    let videoStream: Readable;
+    let mediaBody: any;
     if (params.videoUrl.startsWith('data:')) {
       const base64Data = params.videoUrl.split(',')[1];
-      const videoBuffer = Buffer.from(base64Data, 'base64');
-      videoStream = new Readable();
-      videoStream.push(videoBuffer);
-      videoStream.push(null);
+      mediaBody = Buffer.from(base64Data, 'base64');
     } else {
       const videoResponse = await fetch(params.videoUrl);
-      const videoBuffer = await videoResponse.arrayBuffer();
-      videoStream = new Readable();
-      videoStream.push(Buffer.from(videoBuffer));
-      videoStream.push(null);
+      const arrayBuffer = await videoResponse.arrayBuffer();
+      mediaBody = Buffer.from(arrayBuffer);
     }
 
     // 2. Perform the upload
@@ -65,7 +60,7 @@ export const youtubeService = {
         },
         media: {
           mimeType: 'video/mp4',
-          body: videoStream,
+          body: mediaBody,
         },
       });
 

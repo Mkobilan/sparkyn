@@ -117,6 +117,8 @@ export class VideoService {
                         '-b:a 128k',
                         '-ac 2', // Force stereo
                         '-ar 44100',
+                        '-vsync', 'vfr', // Handle variable frame rate slides
+                        '-af', 'aresample=async=1', // Sync audio timestamps
                         '-movflags +faststart', // Critical for web processing
                         '-shortest'
                     ])
