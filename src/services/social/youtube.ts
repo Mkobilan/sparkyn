@@ -43,14 +43,16 @@ export const youtubeService = {
       mediaBody = Buffer.from(arrayBuffer);
     }
 
+    const videoStream = Readable.from(mediaBody);
+
     // 2. Perform the upload
     try {
       const response = await youtube.videos.insert({
         part: ['snippet', 'status'],
         requestBody: {
           snippet: {
-            title: `${params.title} #Shorts`,
-            description: `${params.description} #Shorts`,
+            title: `#Shorts ${params.title}`, // Put #Shorts at the start
+            description: `${params.description}\n\n#Shorts`,
             categoryId: '22', // People & Blogs
           },
           status: {
@@ -60,7 +62,7 @@ export const youtubeService = {
         },
         media: {
           mimeType: 'video/mp4',
-          body: mediaBody,
+          body: videoStream,
         },
       });
 
