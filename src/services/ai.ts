@@ -263,24 +263,22 @@ export const aiService = {
     } catch (error: any) {
       console.error("Cloudflare FLUX Image generation failed:", error.message);
       
-      // Secondary Fallback if Cloudflare blocks a word: Default to Pollinations API
+      // Secondary Fallback: Default to Pollinations AI (Turbo Model for High Availability)
       const seed = Math.floor(Math.random() * 1000000);
-      const encodedPrompt = encodeURIComponent(`Breathtaking photography: ${scrubbedDesc}`.slice(0, 100));
-      const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=${width}&height=${height}&nologo=true&model=flux`;
-      
-      console.log("Falling back to Public Pollinations FLUX:", fluxUrl);
+      const encodedPrompt = encodeURIComponent(`Breathtaking photography: ${scrubbedDesc}`.slice(0, 50));
+      const fallbackUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=${width}&height=${height}&nologo=true&model=turbo`;
       
       try {
-        const pRes = await fetch(fluxUrl);
+        const pRes = await fetch(fallbackUrl);
         if (pRes.ok) {
            const pBuffer = await pRes.arrayBuffer();
            return `data:image/jpeg;base64,${Buffer.from(pBuffer).toString('base64')}`;
         }
       } catch (pErr) {
-        console.error("Pollinations fetch failed too:", pErr);
+        console.error("Pollinations HA fallback failed too:", pErr);
       }
       
-      return fluxUrl;
+      return fallbackUrl;
     }
   }
 };

@@ -109,18 +109,24 @@ export async function POST(request: Request) {
             bytes = Buffer.from(base64Data, 'base64');
           } else {
             // Fetch from external URL (Pollinations Fallback)
-            const mediaRes = await fetch(mediaUrl);
-            if (!mediaRes.ok) {
-                const errText = await mediaRes.text();
-                throw new Error(`External Image Fetch Failed (${mediaRes.status}): ${errText.slice(0, 100)}`);
-            }
-            const arrayBuffer = await mediaRes.arrayBuffer();
-            bytes = Buffer.from(arrayBuffer);
-            contentType = mediaRes.headers.get('content-type') || 'image/jpeg';
-            
-            // Safety Check: Ensure we didn't capture a JSON error message as an image
-            if (contentType.includes('application/json') || bytes.length < 1000) {
-                throw new Error(`External Image Fetch returned invalid data: ${contentType}`);
+            try {
+                const mediaRes = await fetch(mediaUrl);
+                if (!mediaRes.ok) throw new Error(`Status ${mediaRes.status}`);
+                
+                const arrayBuffer = await mediaRes.arrayBuffer();
+                bytes = Buffer.from(arrayBuffer);
+                contentType = mediaRes.headers.get('content-type') || 'image/jpeg';
+                
+                // Safety Check: Ensure we didn't capture a JSON error message as an image
+                if (contentType.includes('application/json') || bytes.length < 1000) {
+                    throw new Error("Invalid binary payload");
+                }
+            } catch (fallbackErr) {
+                console.warn("AI Fallback Engines Failed. Triggering Emergency Stock Image Bypass...", fallbackErr);
+                // Last Resort: A beautiful, generic, industry-neutral lifestyle photo (Yoga/Wellness/Tech compatible)
+                mediaUrl = "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=1080&auto=format&fit=crop";
+                // We return immediately to use the Unsplash direct URL for Meta scraping
+                break; 
             }
           }
           
