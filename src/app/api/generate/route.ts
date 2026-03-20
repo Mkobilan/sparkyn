@@ -200,7 +200,8 @@ export async function POST(request: Request) {
       debug: {
         errors: generationErrors,
         postCount: generatedPosts.length,
-        hasLinks: publishLinks.length > 0
+        hasLinks: publishLinks.length > 0,
+        videoSizeEstimate: mediaUrl?.startsWith('data:video') ? Math.round(mediaUrl.length * 0.75 / 1024) + ' KB' : null
       }
     });
 

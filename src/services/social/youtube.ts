@@ -64,6 +64,7 @@ export const youtubeService = {
           },
         },
         media: {
+          mimeType: 'video/mp4',
           body: videoStream,
         },
       });

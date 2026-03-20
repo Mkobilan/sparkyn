@@ -105,14 +105,20 @@ export class VideoService {
                     .input(audioPath)
                     .outputOptions([
                         '-c:v libx264',
-                        '-preset ultrafast', // Required for 10s Serverless timeout
+                        '-preset ultrafast', 
                         '-tune stillimage',
+                        '-profile:v high',
+                        '-level 4.1',
                         '-pix_fmt yuv420p',
+                        '-r 25', // Force standard framerate
+                        '-g 50', // Keyframe every 2 seconds
                         '-vf', 'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,setsar=1',
                         '-c:a aac',
                         '-b:a 128k',
-                        '-movflags +faststart', // Essential for YouTube/TikTok processing
-                        '-shortest' // Force cut off the video the exact instant the voiceover finishes
+                        '-ac 2', // Force stereo
+                        '-ar 44100',
+                        '-movflags +faststart', // Critical for web processing
+                        '-shortest'
                     ])
                     .save(outputPath)
                     .on('end', () => resolve())
@@ -126,8 +132,13 @@ export class VideoService {
             
             // 4. Return the fully rendered video as Binary Base64
             const videoBuffer = await fs.readFile(outputPath);
-            
-            // Cleanup Background Artifacts to free Vercel Edge RAM
+            const stats = await fs.stat(outputPath);
+            console.log(`Render complete! Video size: ${stats.size} bytes`);
+
+            if (stats.size < 1000) {
+                console.error("FFmpeg produced a suspiciously small file.");
+                throw new Error("Generated video file is empty or too small.");
+            }
             await Promise.all([
                 fs.unlink(audioPath).catch(() => {}),
                 fs.unlink(concatFilePath).catch(() => {}),
