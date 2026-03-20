@@ -126,9 +126,9 @@ export const aiService = {
       { 
         "script": "The full spoken voiceover script, exactly 3 sentences long.",
         "imagePrompts": [
-          "Detailed Stable Diffusion image prompt for sentence 1 without text",
-          "Detailed Stable Diffusion image prompt for sentence 2 without text",
-          "Detailed Stable Diffusion image prompt for sentence 3 without text"
+          "Cinematic vertical 9:16 photography of [Scene 1 subject], award-winning, highly detailed, 8k, bokeh, professional lighting, no text",
+          "Cinematic vertical 9:16 photography of [Scene 2 subject], award-winning, highly detailed, 8k, bokeh, professional lighting, no text",
+          "Cinematic vertical 9:16 photography of [Scene 3 subject], award-winning, highly detailed, 8k, bokeh, professional lighting, no text"
         ] 
       }`;
       
@@ -210,8 +210,9 @@ export const aiService = {
       console.log(`Requesting Cloudflare Edge FLUX.1 AI image (${width}x${height}) for:`, scrubbedDesc);
       
       // Inject safety keywords for Wellness/Business prompts to bypass Meta's automated "Ad-Safety" rejectors (Error 324)
-      const safetyKeywords = "Organic lifestyle photography, warm and inviting atmosphere, natural lighting, high-quality professional shot, no before/after, no medical icons, no claims, people enjoying life.";
-      const imagePrompt = `Breathtaking, hyper-realistic, award-winning 8k photography for: ${scrubbedDesc}. Context: ${content}. ${safetyKeywords} NO TEXT ON IMAGE. Cinematic lighting, perfect anatomy, ultra-detailed, depth of field.`;
+      const qualityKeywords = "Breathtaking vertical 9:16 photography, hyper-realistic, award-winning 8k, cinematic lighting, perfect anatomy, ultra-detailed, depth of field, professional color grading, sharp focus.";
+      const safetyKeywords = "Organic lifestyle, natural lighting, no before/after, no medical icons, no claims, people enjoying life.";
+      const imagePrompt = `${qualityKeywords} for: ${scrubbedDesc}. Context: ${content}. ${safetyKeywords} STRICTLY NO TEXT OR LOGOS ON IMAGE.`;
       
       const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
       const token = process.env.CLOUDFLARE_API_TOKEN;

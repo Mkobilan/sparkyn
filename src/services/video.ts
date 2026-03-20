@@ -20,22 +20,53 @@ export class VideoService {
             const concatFilePath = path.join(tmpDir, `slides_${jobId}.txt`);
             const outputPath = path.join(tmpDir, `out_${jobId}.mp4`);
             
-            // 1. Generate Voiceover via Google Translate free neural edge-API
+            // 1. Generate Voiceover via ElevenLabs (High Quality) or Fallback to Google
             const safeScript = script.replace(/[^\x00-\x7F]/g, "").trim() || "Enjoy the video.";
+            const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
+
             try {
-                const audioChunks = await googleTTS.getAllAudioBase64(safeScript, {
-                    lang: 'en',
-                    slow: false,
-                    host: 'https://translate.google.com',
-                });
-                const validChunks = audioChunks.filter(c => c && c.base64);
-                if (validChunks.length === 0) throw new Error("Google AI voice engine check failed.");
-                const fullAudioBuffer = Buffer.concat(validChunks.map(c => Buffer.from(c.base64, 'base64')));
-                await fs.writeFile(audioPath, fullAudioBuffer);
-                console.log("TTS Generation Success.");
+                if (elevenLabsKey) {
+                    console.log("Generating high-quality ElevenLabs voiceover...");
+                    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgH9P3Od9pJC`, { // "Adam" voice
+                        method: 'POST',
+                        headers: {
+                            'xi-api-key': elevenLabsKey,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: safeScript,
+                            model_id: "eleven_monolingual_v1",
+                            voice_settings: {
+                                stability: 0.5,
+                                similarity_boost: 0.5,
+                            }
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(`ElevenLabs Error: ${response.status} - ${errText}`);
+                    }
+
+                    const audioBuffer = await response.arrayBuffer();
+                    await fs.writeFile(audioPath, Buffer.from(audioBuffer));
+                    console.log("ElevenLabs TTS Success.");
+                } else {
+                    // Fallback to Google TTS
+                    console.log("No ElevenLabs key found, using Google TTS fallback...");
+                    const audioChunks = await googleTTS.getAllAudioBase64(safeScript, {
+                        lang: 'en',
+                        slow: false,
+                        host: 'https://translate.google.com',
+                    });
+                    const validChunks = audioChunks.filter(c => c && c.base64);
+                    if (validChunks.length === 0) throw new Error("Google AI voice engine check failed.");
+                    const fullAudioBuffer = Buffer.concat(validChunks.map(c => Buffer.from(c.base64, 'base64')));
+                    await fs.writeFile(audioPath, fullAudioBuffer);
+                    console.log("Google TTS Success.");
+                }
             } catch (ttsErr: any) {
-                console.warn("TTS Failed (likely Vercel IP block), falling back to silent video track...", ttsErr.message);
-                // Create a 1-second silent MP3 as a fallback to prevent FFmpeg from crashing due to missing input
+                console.warn("TTS Generation failed, creating silent track...", ttsErr.message);
                 const silentBuffer = Buffer.from('SUQzBAAAAAAAAFRTU0UAAAANAAADTGF2ZTU4LjkxLjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'base64');
                 await fs.writeFile(audioPath, silentBuffer);
             }
