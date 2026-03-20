@@ -199,11 +199,19 @@ export const aiService = {
 
   async generateImage(description: string, content: string, width: number = 1024, height: number = 1024) {
     try {
-      console.log(`Requesting Cloudflare Edge FLUX.1 AI image (${width}x${height}) for:`, description);
+      // SCRUBBER: Neutralize high-risk keywords that trigger Meta's automated "Ad-Safety" (Error 324)
+      // This ensures "Health & Wellness" pages produce "Safe Lifestyle" images instead of "Medical" ones.
+      const highRiskTerms = [/health/gi, /wellness/gi, /medical/gi, /clinics?/gi, /doctors?/gi, /therap(y|ist)/gi, /weight\s*loss/gi, /fitness/gi];
+      let scrubbedDesc = description;
+      highRiskTerms.forEach(regex => {
+          scrubbedDesc = scrubbedDesc.replace(regex, "Modern Lifestyle");
+      });
+
+      console.log(`Requesting Cloudflare Edge FLUX.1 AI image (${width}x${height}) for:`, scrubbedDesc);
       
       // Inject safety keywords for Wellness/Business prompts to bypass Meta's automated "Ad-Safety" rejectors (Error 324)
-      const safetyKeywords = "Organic lifestyle photography, warm and inviting, natural lighting, high-quality professional shot, no before/after, no medical icons, no claims.";
-      const imagePrompt = `Breathtaking, hyper-realistic, award-winning 8k photography for: ${description}. Context: ${content}. ${safetyKeywords} NO TEXT ON IMAGE. Cinematic lighting, perfect anatomy, ultra-detailed, depth of field.`;
+      const safetyKeywords = "Organic lifestyle photography, warm and inviting atmosphere, natural lighting, high-quality professional shot, no before/after, no medical icons, no claims, people enjoying life.";
+      const imagePrompt = `Breathtaking, hyper-realistic, award-winning 8k photography for: ${scrubbedDesc}. Context: ${content}. ${safetyKeywords} NO TEXT ON IMAGE. Cinematic lighting, perfect anatomy, ultra-detailed, depth of field.`;
       
       const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
       const token = process.env.CLOUDFLARE_API_TOKEN;
