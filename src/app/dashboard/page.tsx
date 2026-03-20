@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [recentActivity, setRecentActivity] = useState<any[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [lastResults, setLastResults] = useState<any>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function DashboardPage() {
       const response = await fetch('/api/generate', { method: 'POST' })
       const data = await response.json()
       if (data.success) {
+        setLastResults(data);
         // Refresh data
         const { data: queueData } = await supabase
           .from('scheduled_posts')
@@ -81,6 +83,8 @@ export default function DashboardPage() {
           .order('scheduled_at', { ascending: true })
           .limit(3)
         setQueue(queueData || [])
+      } else {
+        alert("Generation failed: " + data.error);
       }
     } catch (error) {
       console.error(error)
@@ -124,6 +128,60 @@ export default function DashboardPage() {
             {isGenerating ? 'Firing AI...' : 'Generate New Content'}
           </button>
         </div>
+
+        {/* Success Modal */}
+        {lastResults && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="card max-w-md w-full p-8 space-y-6 shadow-2xl border-primary/20 bg-card/95 relative animate-in zoom-in-95 duration-300">
+              <button 
+                onClick={() => setLastResults(null)}
+                className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <AlertCircle className="w-5 h-5 rotate-45" />
+              </button>
+              
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="p-4 rounded-full bg-success/10 text-success border border-success/20">
+                  <CheckCircle2 className="w-10 h-10" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black font-heading">Content Primed!</h3>
+                  <p className="text-muted-foreground font-medium">Your new posts have been generated and scheduled.</p>
+                </div>
+              </div>
+
+              {lastResults.publishLinks?.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest text-center">Live Links</p>
+                  <div className="space-y-2">
+                    {lastResults.publishLinks.map((link: any, i: number) => (
+                      <a 
+                        key={i}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-outline border-primary/20 w-full justify-between group hover:border-primary/50 transition-all font-bold"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Zap className="w-4 h-4 text-primary" />
+                          View on {link.platform}
+                        </span>
+                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button 
+                onClick={() => setLastResults(null)}
+                className="btn btn-primary w-full h-12 font-bold shadow-lg"
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
