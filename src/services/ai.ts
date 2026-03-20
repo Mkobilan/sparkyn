@@ -67,16 +67,16 @@ export const aiService = {
     }
 
     try {
-      // 1.5-Flash is significantly more stable and has higher RPM for free users than 2.5 experimental
-      return await tryGenerate("gemini-1.5-flash");
+      // Use -latest suffix which is more consistent for v1beta endpoints
+      return await tryGenerate("gemini-1.5-flash-latest");
     } catch (e: any) {
       console.error("Primary AI model failed:", e.message);
-      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await fallbackModel.generateContent(prompt + "\n\nCRITICAL: RETURN ONLY VALID JSON.");
-      let text = result.response.text().trim();
-      if (text.startsWith("```json")) text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-      else if (text.startsWith("```")) text = text.replace(/```/g, "").trim();
-      return JSON.parse(text);
+      try {
+        return await tryGenerate("gemini-1.5-flash");
+      } catch (e2: any) {
+        console.error("Secondary fallback failed, trying legacy gemini-pro:", e2.message);
+        return await tryGenerate("gemini-1.5-pro");
+      }
     }
   },
 
@@ -94,7 +94,7 @@ export const aiService = {
         ] 
       }`;
       
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
       const result = await model.generateContent(prompt);
       const text = result.response.text();
       
