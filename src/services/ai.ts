@@ -70,28 +70,35 @@ export const aiService = {
 
   async generateImage(description: string, content: string) {
     try {
-      console.log("Requesting Google AI Studio image (Imagen 3) for:", description);
+      console.log("Requesting Cloudflare Workers AI image for:", description);
       const imagePrompt = `Professional social media marketing photography for: ${description}. Context: ${content}. NO TEXT ON IMAGE. Clean, high quality, cinematic lighting, engaging composition.`;
       
-      const response = await newGenAI.models.generateImages({
-        model: 'imagen-3.0-generate-002',
-        prompt: imagePrompt,
-        config: {
-          numberOfImages: 1,
-          outputMimeType: 'image/jpeg',
-          aspectRatio: '1:1'
-        }
+      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+      const token = process.env.CLOUDFLARE_API_TOKEN;
+      if (!accountId || !token) throw new Error("Cloudflare credentials missing.");
+
+      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt: imagePrompt })
       });
-      
-      const base64Image = response.generatedImages?.[0]?.image?.imageBytes;
-      if (base64Image) {
-        console.log("Successfully generated image via Google AI Studio!");
-        return `data:image/jpeg;base64,${base64Image}`;
+
+      if (!response.ok) {
+        throw new Error(`Cloudflare error: ${response.statusText} - ${await response.text()}`);
       }
+
+      const arrayBuffer = await response.arrayBuffer();
+      // Ensure binary exact buffer encoding 
+      const base64Image = Buffer.from(arrayBuffer).toString('base64');
       
-      throw new Error(`Google AI Studio failed to return image data. Response structure: ${JSON.stringify(response)}`);
+      console.log("Successfully generated image via Cloudflare!");
+      return `data:image/jpeg;base64,${base64Image}`;
+      
     } catch (error: any) {
-      console.error("Image generation (Google AI Studio) failed:", error.message);
+      console.error("Image generation (Cloudflare) failed:", error.message);
       
       // Since Google's free tier sets the Nano Banana image quota to 0, we fallback to a free public AI image generator!
       const seed = Math.floor(Math.random() * 100000);
