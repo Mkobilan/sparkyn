@@ -71,7 +71,8 @@ export class VideoService {
                         '-preset ultrafast', // Required for 10s Serverless timeout
                         '-pix_fmt yuv420p',
                         // Convert 1:1 square SDXL image to 9:16 vertical TikTok resolution natively
-                        '-vf', 'scale=-1:1920,crop=1080:1920',
+                        // Lowering to 720p to stay under Vercel 10s timeout
+                        '-vf', 'scale=-1:1280,crop=720:1280',
                         '-c:a aac',
                         '-shortest' // Force cut off the video the exact instant the voiceover finishes
                     ])

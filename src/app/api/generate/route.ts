@@ -46,6 +46,7 @@ export async function POST(request: Request) {
 
     for (const account of accounts) {
       console.log(`Generating content for ${account.platform} (${account.platform_name})...`)
+      console.time(`PostGeneration-${account.id}`);
       try {
         const content = await aiService.generateContent({
           businessName: account.metadata?.business_name || profile.business_name,
@@ -74,16 +75,20 @@ export async function POST(request: Request) {
 
         if (account.platform === 'tiktok' || account.platform === 'instagramreels' || isVideo) {
              console.log(`Shorts/Video generation triggered for ${account.platform_name}! Initializing Vercel FFmpeg compiler...`);
+             console.time(`VideoTotal-${account.id}`);
              const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, content.caption);
              
+             console.time(`ImagesFetch-${account.id}`);
              // High-throughput parallel evaluation to defeat strict 10s Serverless Hobby execution timeouts
              const imagePromises = imagePrompts.map(prompt => 
                  aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption)
              );
              const imagesBase64 = await Promise.all(imagePromises);
+             console.timeEnd(`ImagesFetch-${account.id}`);
              
              const { videoService } = await import('@/services/video');
              mediaUrl = await videoService.compileShortVideo(imagesBase64, script);
+             console.timeEnd(`VideoTotal-${account.id}`);
         } else {
              mediaUrl = await aiService.generateImage(imageContext, content.caption);
         }
@@ -202,6 +207,7 @@ export async function POST(request: Request) {
         }
 
         if (post) generatedPosts.push(post)
+        console.timeEnd(`PostGeneration-${account.id}`);
       } catch (err: any) {
         console.error(`Failed to generate for ${account.platform}:`, err.message)
         generationErrors.push(`[${account.platform_name}] ${err.message}`)
