@@ -194,9 +194,19 @@ export const aiService = {
       if (contentType.includes("application/json")) {
           const json = await response.json();
           base64Image = json.result?.image || json.image || "";
+          console.log(`Cloudflare JSON response detected. Image found: ${!!base64Image}`);
+          if (!base64Image && json.errors) {
+            console.error("Cloudflare AI Errors:", json.errors);
+            throw new Error(`Cloudflare AI Block: ${json.errors[0]?.message || 'Unknown error'}`);
+          }
       } else {
           const arrayBuffer = await response.arrayBuffer();
           base64Image = Buffer.from(arrayBuffer).toString('base64');
+          console.log(`Cloudflare Binary response detected. Size: ${base64Image.length}`);
+      }
+      
+      if (!base64Image || base64Image.length < 100) {
+        throw new Error("Cloudflare returned an empty or corrupt image buffer.");
       }
       
       return `data:image/jpeg;base64,${base64Image}`;

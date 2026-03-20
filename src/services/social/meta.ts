@@ -12,7 +12,8 @@ export const metaService = {
     const url = `https://graph.facebook.com/v19.0/${pageId}/${endpoint}`;
     
     // Use manual multipart extraction ONLY for images, MP4 boundary corruption inside Next fetch deletes the video post-processing
-    if (params.base64Image && !params.isVideo) {
+    // Ensure base64Image is a healthy length (>1000 bytes) to avoid Meta API "invalid image" 500s
+    if (params.base64Image && params.base64Image.length > 1000 && !params.isVideo) {
       const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
       const filename = params.isVideo ? 'video.mp4' : 'image.jpg';
       const contentType = params.isVideo ? 'video/mp4' : 'image/jpeg';
