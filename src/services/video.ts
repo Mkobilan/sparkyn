@@ -23,7 +23,7 @@ export class VideoService {
             // 1. Generate Voiceover via Google Translate free neural edge-API
             console.log("Generating Voiceover TTS...");
             const audioChunks = await googleTTS.getAllAudioBase64(script, {
-                lang: 'en-US',
+                lang: 'en',
                 slow: false,
                 host: 'https://translate.google.com',
             });
