@@ -112,10 +112,10 @@ export const aiService = {
       const imagePrompt = `Breathtaking, hyper-realistic, award-winning 8k photography for: ${description}. Context: ${content}. NO TEXT ON IMAGE. Cinematic lighting, perfect anatomy, ultra-detailed, depth of field.`;
       
       // We use Pollinations.ai entirely for free as our primary FLUX generator.
-      // We request EXACTLY 1080x1920 to ensure it is natively composed for TikTok/Reels without zooming or cropping!
+      // We request exactly 768x1344 (9:16 vertical) to ensure ultra-fast generation times below 5s for Vercel timeouts
       const seed = Math.floor(Math.random() * 1000000);
       const encodedPrompt = encodeURIComponent(imagePrompt.slice(0, 800));
-      const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=1080&height=1920&nologo=true&model=flux`;
+      const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=768&height=1344&nologo=true&model=flux`;
       
       console.log("Downloading FLUX.1 image from stream:", fluxUrl);
       

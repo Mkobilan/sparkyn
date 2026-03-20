@@ -75,11 +75,13 @@ export async function POST(request: Request) {
         if (account.platform === 'tiktok' || account.platform === 'instagramreels' || isVideo) {
              console.log(`Shorts/Video generation triggered for ${account.platform_name}! Initializing Vercel FFmpeg compiler...`);
              const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, content.caption);
-             const imagesBase64 = [];
-             for (const prompt of imagePrompts) {
-                 const img = await aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption);
-                 imagesBase64.push(img);
-             }
+             
+             // High-throughput parallel evaluation to defeat strict 10s Serverless Hobby execution timeouts
+             const imagePromises = imagePrompts.map(prompt => 
+                 aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption)
+             );
+             const imagesBase64 = await Promise.all(imagePromises);
+             
              const { videoService } = await import('@/services/video');
              mediaUrl = await videoService.compileShortVideo(imagesBase64, script);
         } else {
