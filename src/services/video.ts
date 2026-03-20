@@ -97,37 +97,43 @@ export class VideoService {
 
             console.log("Executing Vercel FFmpeg UltraFast Render...");
             
-            // 3. UltraFast FFmpeg Compilation
+            // 3. New Filter Complex Rendering (More robust than concat demuxer)
+            const videoFilters = imagesBase64.map((_, i) => 
+                `[${i}:v]format=pix_fmts=yuv420p,setsar=1,scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,loop=loop=150:size=1:start=0[v${i}]`
+            );
+            videoFilters.push(`${imagesBase64.map((_, i) => `[v${i}]`).join('')}concat=n=${imagesBase64.length}:v=1:a=0[outv]`);
+
             await new Promise<void>((resolve, reject) => {
-                ffmpeg()
-                    .input(concatFilePath)
-                    .inputOptions(['-f concat', '-safe 0'])
-                    .input(audioPath)
-                    .outputOptions([
-                        '-c:v libx264',
-                        '-preset ultrafast', 
-                        '-tune stillimage',
-                        '-profile:v high',
-                        '-level 4.1',
-                        '-pix_fmt yuv420p',
-                        '-r 25', // Force standard framerate
-                        '-g 50', // Keyframe every 2 seconds
-                        '-vf', 'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,setsar=1',
-                        '-c:a aac',
-                        '-b:a 128k',
-                        '-ac 2', // Force stereo
-                        '-ar 44100',
-                        '-vsync', 'vfr', // Handle variable frame rate slides
-                        '-af', 'aresample=async=1', // Sync audio timestamps
-                        '-movflags +faststart', // Critical for web processing
-                        '-shortest'
-                    ])
-                    .save(outputPath)
-                    .on('end', () => resolve())
-                    .on('error', (err) => {
-                        console.error('FFmpeg render failed:', err);
-                        reject(new Error(`FFmpeg error: ${err.message}`));
-                    });
+                const ff = ffmpeg();
+                // Add the 3 image inputs
+                for (let i = 0; i < imagesBase64.length; i++) {
+                    ff.input(path.join(tmpDir, `img_${jobId}_${i}.jpg`));
+                }
+                ff.input(audioPath);
+                
+                ff.outputOptions([
+                    '-filter_complex', videoFilters.join(';'),
+                    '-map [outv]',
+                    '-map 3:a', // Map the audio input (the 4th input, index 3)
+                    '-c:v libx264',
+                    '-preset ultrafast',
+                    '-profile:v high',
+                    '-level 4.1',
+                    '-crf 20',
+                    '-pix_fmt yuv420p',
+                    '-r 30',
+                    '-g 60',
+                    '-c:a aac',
+                    '-b:a 128k',
+                    '-movflags +faststart',
+                    '-shortest'
+                ])
+                .save(outputPath)
+                .on('end', () => resolve())
+                .on('error', (err) => {
+                    console.error('FFmpeg render failed:', err);
+                    reject(new Error(`FFmpeg error: ${err.message}`));
+                });
             });
 
             console.log("Render complete! Serializing video for Vercel edge stream...");
