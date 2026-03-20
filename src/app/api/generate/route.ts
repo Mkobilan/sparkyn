@@ -64,19 +64,33 @@ export async function POST(request: Request) {
           continue
         }
 
-        // 3. Generate image (base64)
+        // 3. Generate media (image or video)
         const accountDescription = account.metadata?.description || profile.business_description;
         const accountIndustry = account.metadata?.industry || profile.industry;
         const imageContext = `${accountIndustry} business - ${accountDescription}`;
 
-        let imageUrl = await aiService.generateImage(imageContext, content.caption)
+        let mediaUrl = '';
         let rawBase64ForMeta: string | undefined = undefined;
 
+        if (account.platform === 'tiktok' || account.platform === 'instagramreels') {
+             console.log(`TikTok/Reels detected for ${account.platform_name}! Initializing native Vercel FFmpeg compiler...`);
+             const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, content.caption);
+             const imagesBase64 = [];
+             for (const prompt of imagePrompts) {
+                 const img = await aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption);
+                 imagesBase64.push(img);
+             }
+             const { videoService } = await import('@/services/video');
+             mediaUrl = await videoService.compileShortVideo(imagesBase64, script);
+        } else {
+             mediaUrl = await aiService.generateImage(imageContext, content.caption);
+        }
+
         // Upload to Supabase to convert to public URL, as Meta API requires it.
-        if (imageUrl.startsWith('data:image')) {
-          console.log(`Uploading generated base64 image to Supabase...`)
-          const contentType = imageUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
-          const base64Data = imageUrl.split(',')[1];
+        if (mediaUrl.startsWith('data:image') || mediaUrl.startsWith('data:video')) {
+          console.log(`Uploading generated media asset to Supabase...`)
+          const contentType = mediaUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
+          const base64Data = mediaUrl.split(',')[1];
           rawBase64ForMeta = base64Data;
           
           // Guaranteed binary safety: decode base64 to standard ArrayBuffer manually
@@ -86,7 +100,9 @@ export async function POST(request: Request) {
             bytes[i] = binaryString.charCodeAt(i);
           }
           
-          const ext = contentType === 'image/png' ? 'png' : 'jpg';
+          
+          const isVideo = contentType === 'video/mp4';
+          const ext = isVideo ? 'mp4' : (contentType === 'image/png' ? 'png' : 'jpg');
           const filename = `generation_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
@@ -106,8 +122,8 @@ export async function POST(request: Request) {
             .getPublicUrl(filename);
             
           const appOrigin = new URL(request.url).origin;
-          imageUrl = `${appOrigin}/api/public-image?url=${encodeURIComponent(publicUrlData.publicUrl)}`;
-          console.log(`Successfully uploaded image to Supabase and proxied: ${imageUrl}`)
+          mediaUrl = `${appOrigin}/api/public-image?url=${encodeURIComponent(publicUrlData.publicUrl)}`;
+          console.log(`Successfully uploaded media to Supabase and proxied: ${mediaUrl}`)
           
           // Wait 2000ms to allow Supabase global CDN to propagate before Facebook eagerly fetches it
           await new Promise(resolve => setTimeout(resolve, 2000));
@@ -126,7 +142,7 @@ export async function POST(request: Request) {
           if (account.platform === 'facebook') {
             console.log(`Publishing now to Facebook Page: ${account.platform_name}`)
             const pubResult = await metaService.publishToFacebook(account.access_token, account.platform_user_id, {
-              imageUrl: imageUrl,
+              imageUrl: mediaUrl,
               caption: `${content.hook}\n\n${content.caption}\n\n${content.cta}\n\n${content.hashtags}`,
               base64Image: rawBase64ForMeta
             })
@@ -142,7 +158,7 @@ export async function POST(request: Request) {
           } else if (account.platform === 'instagram') {
             console.log(`Publishing now to Instagram: ${account.platform_name}`)
             const pubResult = await metaService.publishToInstagram(account.access_token, account.platform_user_id, {
-              imageUrl: imageUrl,
+              imageUrl: mediaUrl,
               caption: `${content.hook}\n\n${content.caption}\n\n${content.cta}\n\n${content.hashtags}`
             })
             
@@ -171,7 +187,7 @@ export async function POST(request: Request) {
             caption: content.caption,
             cta: content.cta,
             hashtags: content.hashtags ? content.hashtags.split(' ') : [],
-            image_url: imageUrl,
+            image_url: mediaUrl,
             scheduled_at: scheduledTime.toISOString(),
             published_at: publishedAt,
             status: status

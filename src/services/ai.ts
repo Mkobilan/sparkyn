@@ -68,6 +68,44 @@ export const aiService = {
     }
   },
 
+  async generateShortVideoScript(description: string, content: string): Promise<{ script: string, imagePrompts: string[] }> {
+    try {
+      console.log("Generating TikTok short video script via Gemini...");
+      const prompt = `Write a viral 15-second TikTok video script for: ${description}. Theme: ${content}. 
+      Return JSON EXACTLY in this format, with 3 distinct scenes: 
+      { 
+        "script": "The full spoken voiceover script, exactly 3 sentences long.",
+        "imagePrompts": [
+          "Detailed Stable Diffusion image prompt for sentence 1 without text",
+          "Detailed Stable Diffusion image prompt for sentence 2 without text",
+          "Detailed Stable Diffusion image prompt for sentence 3 without text"
+        ] 
+      }`;
+      
+      const response = await newGenAI.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: prompt
+      });
+      
+      const stringText = response.text || '';
+      const match = stringText.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error("Failed to parse script video JSON");
+      
+      return JSON.parse(match[0]);
+
+    } catch (error: any) {
+      console.error("Video script generation failed:", error.message);
+      return {
+        script: `Welcome to our page! Check out our amazing content related to ${description}. We guarantee you will love it!`,
+        imagePrompts: [
+          `Cinematic professional photography for ${description}`,
+          `Engaging beautiful background for ${description}`,
+          `High quality viral aesthetic for ${description}`
+        ]
+      };
+    }
+  },
+
   async generateImage(description: string, content: string) {
     try {
       console.log("Requesting Cloudflare Workers AI image for:", description);
