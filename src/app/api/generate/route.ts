@@ -96,15 +96,26 @@ export async function POST(request: Request) {
         }
 
         // Upload to Supabase to convert to public URL, as Meta API requires it.
-        if (mediaUrl.startsWith('data:image') || mediaUrl.startsWith('data:video')) {
-          console.log(`Uploading generated media asset to Supabase...`)
-          const contentType = mediaUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
-          const base64Data = mediaUrl.split(',')[1];
-          rawBase64ForMeta = base64Data;
+        // Captures both local data URIs and external Pollinations URLs to guarantee short, scraper-friendly links
+        if (mediaUrl.startsWith('data:') || (mediaUrl.startsWith('http') && !mediaUrl.includes('supabase.co'))) {
+          console.log(`Capturing media asset to Supabase storage: ${mediaUrl.slice(0, 50)}...`)
+          let bytes: Buffer;
+          let contentType: string;
+
+          if (mediaUrl.startsWith('data:')) {
+            contentType = mediaUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
+            const base64Data = mediaUrl.split(',')[1];
+            rawBase64ForMeta = base64Data;
+            bytes = Buffer.from(base64Data, 'base64');
+          } else {
+            // Fetch from external URL (Pollinations Fallback)
+            const mediaRes = await fetch(mediaUrl);
+            const arrayBuffer = await mediaRes.arrayBuffer();
+            bytes = Buffer.from(arrayBuffer);
+            contentType = mediaRes.headers.get('content-type') || 'image/jpeg';
+          }
           
-          // Standard Node.js base64 to Buffer decoding
-          const bytes = Buffer.from(base64Data, 'base64');
-          console.log(`Decoding successful. Byte size: ${bytes.length}`);
+          console.log(`Media captured. Byte size: ${bytes.length}`);
           
           
           const isVideo = contentType === 'video/mp4';
