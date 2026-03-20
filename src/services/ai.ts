@@ -220,6 +220,17 @@ export const aiService = {
       const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=768&height=1344&nologo=true&model=flux`;
       
       console.log("Falling back to Public Pollinations FLUX:", fluxUrl);
+      
+      try {
+        const pRes = await fetch(fluxUrl);
+        if (pRes.ok) {
+           const pBuffer = await pRes.arrayBuffer();
+           return `data:image/jpeg;base64,${Buffer.from(pBuffer).toString('base64')}`;
+        }
+      } catch (pErr) {
+        console.error("Pollinations fetch failed too:", pErr);
+      }
+      
       return fluxUrl;
     }
   }
