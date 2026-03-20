@@ -209,8 +209,8 @@ export async function POST(request: Request) {
         if (post) generatedPosts.push(post)
         console.timeEnd(`PostGeneration-${account.id}`);
       } catch (err: any) {
-        console.error(`Failed to generate for ${account.platform}:`, err.message)
-        generationErrors.push(`[${account.platform_name}] ${err.message}`)
+        console.error(`CRITICAL: Generation failed for ${account.platform}:`, err);
+        generationErrors.push(`[${account.platform_name}] ${err.message || 'Internal logic error'}`);
       }
     }
 

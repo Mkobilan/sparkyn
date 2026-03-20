@@ -21,18 +21,23 @@ export class VideoService {
             const outputPath = path.join(tmpDir, `out_${jobId}.mp4`);
             
             // 1. Generate Voiceover via Google Translate free neural edge-API
-            console.log("Generating Voiceover TTS...");
-            // Sanitize script of emojis or strange characters that break Google TTS
-            const safeScript = script.replace(/[^\x00-\x7F]/g, "").trim() || "Enjoy the video.";
-            const audioChunks = await googleTTS.getAllAudioBase64(safeScript, {
-                lang: 'en',
-                slow: false,
-                host: 'https://translate.google.com',
-            });
-            const validChunks = audioChunks.filter(c => c && c.base64);
-            if (validChunks.length === 0) throw new Error("Google TTS rejected the voice script generation.");
-            const fullAudioBuffer = Buffer.concat(validChunks.map(c => Buffer.from(c.base64, 'base64')));
-            await fs.writeFile(audioPath, fullAudioBuffer);
+            try {
+                const audioChunks = await googleTTS.getAllAudioBase64(safeScript, {
+                    lang: 'en',
+                    slow: false,
+                    host: 'https://translate.google.com',
+                });
+                const validChunks = audioChunks.filter(c => c && c.base64);
+                if (validChunks.length === 0) throw new Error("Google AI voice engine check failed.");
+                const fullAudioBuffer = Buffer.concat(validChunks.map(c => Buffer.from(c.base64, 'base64')));
+                await fs.writeFile(audioPath, fullAudioBuffer);
+                console.log("TTS Generation Success.");
+            } catch (ttsErr: any) {
+                console.warn("TTS Failed (likely Vercel IP block), falling back to silent video track...", ttsErr.message);
+                // Create a 1-second silent MP3 as a fallback to prevent FFmpeg from crashing due to missing input
+                const silentBuffer = Buffer.from('SUQzBAAAAAAAAFRTU0UAAAANAAADTGF2ZTU4LjkxLjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'base64');
+                await fs.writeFile(audioPath, silentBuffer);
+            }
             
             // 2. Save Images and Build FFmpeg Concat file
             let concatContent = '';

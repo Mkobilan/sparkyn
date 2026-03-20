@@ -83,7 +83,7 @@ export const aiService = {
 
   async generateShortVideoScript(description: string, content: string): Promise<{ script: string, imagePrompts: string[] }> {
     try {
-      console.log("Generating TikTok short video script via Gemini...");
+      console.log("Generating TikTok short video script via Gemini 1.5-Flash...");
       const prompt = `Write a viral 15-second TikTok video script for: ${description}. Theme: ${content}. 
       Return JSON EXACTLY in this format, with 3 distinct scenes: 
       { 
@@ -95,13 +95,11 @@ export const aiService = {
         ] 
       }`;
       
-      const response = await newGenAI.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: prompt
-      });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
       
-      const stringText = response.text || '';
-      const match = stringText.match(/\{[\s\S]*\}/);
+      const match = text.match(/\{[\s\S]*\}/);
       if (!match) throw new Error("Failed to parse script video JSON");
       
       return JSON.parse(match[0]);
