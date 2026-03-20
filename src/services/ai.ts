@@ -96,8 +96,8 @@ export const aiService = {
         
         try {
           return JSON.parse(jsonStr);
-        } catch (parseErr) {
-          console.error("Llama-3 JSON parse failure, fallback to safe defaults:", parseErr.message);
+        } catch (parseErr: any) {
+          console.error("Llama-3 JSON parse failure, fallback to safe defaults:", parseErr?.message || parseErr);
           return {
             hook: "🚀 Boost your presence with " + params.businessName,
             caption: params.description + "\n\nFollow us for more updates!",
