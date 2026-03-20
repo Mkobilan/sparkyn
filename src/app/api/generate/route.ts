@@ -109,7 +109,8 @@ export async function POST(request: Request) {
           
           const isVideo = contentType === 'video/mp4';
           const ext = isVideo ? 'mp4' : (contentType === 'image/png' ? 'png' : 'jpg');
-          const filename = `generation_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+          // Shorten filename to avoid "Link Too Long" errors (subcode 2061013)
+          const filename = `${Math.random().toString(36).substring(7)}_${Date.now()}.${ext}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('generated-images')
@@ -127,11 +128,11 @@ export async function POST(request: Request) {
             .from('generated-images')
             .getPublicUrl(filename);
             
-          const appOrigin = new URL(request.url).origin;
-          mediaUrl = `${appOrigin}/api/public-image?url=${encodeURIComponent(publicUrlData.publicUrl)}`;
-          console.log(`Successfully uploaded media to Supabase and proxied: ${mediaUrl}`)
+          // Use Raw Supabase URL for Meta (Photo/Feed) to avoid "Link Too Long" errors
+          mediaUrl = publicUrlData.publicUrl;
+          console.log(`Successfully uploaded media to Supabase: ${mediaUrl}`)
           
-          // Wait 2000ms to allow Supabase global CDN to propagate before Facebook eagerly fetches it
+          // Wait 2000ms to allow Supabase global CDN to propagate
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
