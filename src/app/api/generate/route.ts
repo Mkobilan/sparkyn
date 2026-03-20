@@ -95,12 +95,9 @@ export async function POST(request: Request) {
           const base64Data = mediaUrl.split(',')[1];
           rawBase64ForMeta = base64Data;
           
-          // Guaranteed binary safety: decode base64 to standard ArrayBuffer manually
-          const binaryString = atob(base64Data);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
+          // Standard Node.js base64 to Buffer decoding
+          const bytes = Buffer.from(base64Data, 'base64');
+          console.log(`Decoding successful. Byte size: ${bytes.length}`);
           
           
           const isVideo = contentType === 'video/mp4';
@@ -109,7 +106,7 @@ export async function POST(request: Request) {
           
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('generated-images')
-            .upload(filename, bytes.buffer, {
+            .upload(filename, bytes, { // Pass the Buffer directly
               contentType: contentType,
               upsert: false
             });
