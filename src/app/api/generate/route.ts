@@ -1,6 +1,8 @@
 import { createClient } from '../../../lib/supabase'
 import { aiService } from '../../../services/ai'
 import { metaService } from '../../../services/social/meta'
+import { youtubeService } from '../../../services/social/youtube'
+import { tiktokService } from '../../../services/social/tiktok'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
         let rawBase64ForMeta: string | undefined = undefined;
 
         try {
-            if (account.platform === 'tiktok' || account.platform === 'instagramreels' || isVideo) {
+            if (account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' || isVideo) {
                  const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, content.caption);
                  const imagePromises = imagePrompts.map(prompt => aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption, 768, 1344));
                  const imagesBase64 = await Promise.all(imagePromises);
@@ -109,7 +111,11 @@ export async function POST(request: Request) {
             ? await metaService.publishToFacebook(account.access_token, account.platform_user_id, pubParams)
             : (account.platform === 'instagram' 
                ? await metaService.publishToInstagram(account.access_token, account.platform_user_id, pubParams)
-               : { id: 'simulated_' + Date.now() });
+               : (account.platform === 'youtube'
+                  ? await youtubeService.publishShort(account.access_token, { videoUrl: mediaUrl, title: content.hook, description: content.caption })
+                  : (account.platform === 'tiktok'
+                     ? await tiktokService.publishVideo(account.access_token, { videoUrl: mediaUrl, caption: content.caption })
+                     : { id: 'simulated_' + Date.now() })));
 
           if (pubResult.id && !pubResult.error) {
             status = 'published';
