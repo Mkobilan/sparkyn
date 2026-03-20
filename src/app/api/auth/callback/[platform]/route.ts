@@ -51,7 +51,13 @@ export async function GET(
     } else if (platform === 'tiktok') {
       const cookieStore = await cookies()
       const codeVerifier = cookieStore.get('tiktok_code_verifier')?.value
+      const storedState = cookieStore.get('tiktok_state')?.value
+      const state = searchParams.get('state')
       
+      if (storedState && state !== storedState) {
+        throw new Error('Invalid state parameter')
+      }
+
       const resp = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -66,8 +72,9 @@ export async function GET(
       })
       tokenData = await resp.json()
       
-      // Clean up cookie
+      // Clean up cookies
       cookieStore.delete('tiktok_code_verifier')
+      cookieStore.delete('tiktok_state')
 
       if (tokenData.error) {
         console.error('TikTok Token Error:', tokenData.error, tokenData.error_description)
