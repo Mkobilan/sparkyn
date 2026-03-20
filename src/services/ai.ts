@@ -108,44 +108,29 @@ export const aiService = {
 
   async generateImage(description: string, content: string) {
     try {
-      console.log("Requesting Cloudflare Workers AI image for:", description);
-      const imagePrompt = `Professional social media marketing photography for: ${description}. Context: ${content}. NO TEXT ON IMAGE. Clean, high quality, cinematic lighting, engaging composition.`;
+      console.log("Requesting FLUX.1 State-of-the-Art AI image for:", description);
+      const imagePrompt = `Breathtaking, hyper-realistic, award-winning 8k photography for: ${description}. Context: ${content}. NO TEXT ON IMAGE. Cinematic lighting, perfect anatomy, ultra-detailed, depth of field.`;
       
-      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-      const token = process.env.CLOUDFLARE_API_TOKEN;
-      if (!accountId || !token) throw new Error("Cloudflare credentials missing.");
-
-      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ prompt: imagePrompt })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Cloudflare error: ${response.statusText} - ${await response.text()}`);
-      }
-
+      // We use Pollinations.ai entirely for free as our primary FLUX generator.
+      // We request EXACTLY 1080x1920 to ensure it is natively composed for TikTok/Reels without zooming or cropping!
+      const seed = Math.floor(Math.random() * 1000000);
+      const encodedPrompt = encodeURIComponent(imagePrompt.slice(0, 800));
+      const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=1080&height=1920&nologo=true&model=flux`;
+      
+      console.log("Downloading FLUX.1 image from stream:", fluxUrl);
+      
+      // We stream the image directly back into an ArrayBuffer so it remains completely identical to our internal proxy endpoints
+      const response = await fetch(fluxUrl);
+      if (!response.ok) throw new Error("Failed to fetch Flux image buffer.");
+      
       const arrayBuffer = await response.arrayBuffer();
-      // Ensure binary exact buffer encoding 
       const base64Image = Buffer.from(arrayBuffer).toString('base64');
       
-      console.log("Successfully generated image via Cloudflare!");
       return `data:image/jpeg;base64,${base64Image}`;
       
     } catch (error: any) {
-      console.error("Image generation (Cloudflare) failed:", error.message);
-      
-      // Since Google's free tier sets the Nano Banana image quota to 0, we fallback to a free public AI image generator!
-      const seed = Math.floor(Math.random() * 100000);
-      const safePrompt = `Professional social media photography, no text, clean composition: ${description}. ${content}`.slice(0, 800);
-      const encodedPrompt = encodeURIComponent(safePrompt);
-      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=1024&height=1024&nologo=true`;
-      
-      console.log("Using Pollinations.ai fallback:", pollinationsUrl);
-      return pollinationsUrl;
+      console.error("FLUX Image generation failed:", error.message);
+      throw new Error(`Visual Generator Failure: ${error.message}`);
     }
   }
 };
