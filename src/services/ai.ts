@@ -3,6 +3,11 @@ import { createClient } from '../lib/supabase-browser'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
+const CLOUDFLARE_URL = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/`;
+const CLOUDFLARE_AUTH = {
+    headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` }
+};
+
 export const aiService = {
   /**
    * Generates social media text content based on business profile
@@ -70,12 +75,25 @@ export const aiService = {
       // Use -latest suffix which is more consistent for v1beta endpoints
       return await tryGenerate("gemini-1.5-flash-latest");
     } catch (e: any) {
-      console.error("Primary AI model failed:", e.message);
+      console.warn("Gemini Failed, attempting Cloudflare Llama-3 fallback...", e.message);
       try {
-        return await tryGenerate("gemini-1.5-flash");
-      } catch (e2: any) {
-        console.error("Secondary fallback failed, trying legacy gemini-pro:", e2.message);
-        return await tryGenerate("gemini-1.5-pro");
+        const cfRes = await fetch(`${CLOUDFLARE_URL}@cf/meta/llama-3-8b-instruct`, {
+            method: 'POST',
+            ...CLOUDFLARE_AUTH,
+            body: JSON.stringify({
+                messages: [
+                    { role: 'system', content: 'You are a social media expert. Return ONLY valid JSON.' },
+                    { role: 'user', content: prompt }
+                ]
+            })
+        });
+        const cfData = await cfRes.json();
+        const text = cfData.result.response;
+        const match = text.match(/\{[\s\S]*\}/);
+        return JSON.parse(match ? match[0] : text);
+      } catch (cfErr: any) {
+         console.error("Cloudflare also failed:", cfErr.message);
+         throw new Error(`AI Engine Failure: Gemini(404) + Cloudflare(${cfErr.message})`);
       }
     }
   },
