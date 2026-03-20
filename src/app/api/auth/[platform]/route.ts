@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { generateCodeVerifier, generateCodeChallenge } from '@/lib/pkce'
+import { cookies } from 'next/headers'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ platform: string }> }
 ) {
   const { platform } = await params
-  const baseUrl = process.env.VERCEL_PROJECT_URL || 'http://localhost:3000'
+  
+  // Fix baseUrl construction for Vercel and Local
+  let baseUrl = 'http://localhost:3000'
+  if (process.env.VERCEL_PROJECT_URL) {
+    baseUrl = `https://${process.env.VERCEL_PROJECT_URL}`
+  } else if (process.env.VERCEL_URL) {
+    baseUrl = `https://${process.env.VERCEL_URL}`
+  }
+
   const redirectUri = `${baseUrl}/api/auth/callback/${platform}`
 
   let authUrl = ''
 
   if (platform === 'facebook' || platform === 'instagram') {
     // Meta OAuth
-    // Note: Some permissions require App Review or Advanced Access.
-    // We'll use the most common ones for social media management.
     const scopes = [
       'public_profile',
       'email',
@@ -26,10 +34,22 @@ export async function GET(
     
     authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${process.env.META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code`
   } else if (platform === 'tiktok') {
-    // TikTok OAuth
-    // Using the scopes mentioned in tiktok_submission.md
+    // TikTok OAuth with PKCE
     const scopes = 'user.info.basic,video.upload'
-    authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${process.env.TIKTOK_CLIENT_KEY}&scope=${scopes}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}`
+    const codeVerifier = generateCodeVerifier()
+    const codeChallenge = await generateCodeChallenge(codeVerifier)
+    
+    // Store code verifier in a cookie for the callback
+    const cookieStore = await cookies()
+    cookieStore.set('tiktok_code_verifier', codeVerifier, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 10, // 10 minutes
+      path: '/',
+    })
+
+    authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${process.env.TIKTOK_CLIENT_KEY}&scope=${scopes}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${codeChallenge}&code_challenge_method=S256`
   } else if (platform === 'youtube') {
     // Google OAuth
     const scopes = [

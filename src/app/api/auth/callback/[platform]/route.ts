@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase'
+import { cookies } from 'next/headers'
 
 export async function GET(
   request: NextRequest,
@@ -9,11 +10,18 @@ export async function GET(
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   
-  if (!code) {
-    return NextResponse.redirect(`${process.env.VERCEL_PROJECT_URL || 'http://localhost:3000'}/dashboard/connect?error=no_code`)
+  // Fix baseUrl construction for Vercel and Local
+  let baseUrl = 'http://localhost:3000'
+  if (process.env.VERCEL_PROJECT_URL) {
+    baseUrl = `https://${process.env.VERCEL_PROJECT_URL}`
+  } else if (process.env.VERCEL_URL) {
+    baseUrl = `https://${process.env.VERCEL_URL}`
   }
 
-  const baseUrl = process.env.VERCEL_PROJECT_URL || 'http://localhost:3000'
+  if (!code) {
+    return NextResponse.redirect(`${baseUrl}/dashboard/connect?error=no_code`)
+  }
+
   const redirectUri = `${baseUrl}/api/auth/callback/${platform}`
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -41,6 +49,9 @@ export async function GET(
         tokenData = longLivedData
       }
     } else if (platform === 'tiktok') {
+      const cookieStore = await cookies()
+      const codeVerifier = cookieStore.get('tiktok_code_verifier')?.value
+      
       const resp = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -50,10 +61,18 @@ export async function GET(
           code,
           grant_type: 'authorization_code',
           redirect_uri: redirectUri,
+          code_verifier: codeVerifier || '',
         }),
       })
       tokenData = await resp.json()
-      if (tokenData.error) throw new Error(tokenData.error)
+      
+      // Clean up cookie
+      cookieStore.delete('tiktok_code_verifier')
+
+      if (tokenData.error) {
+        console.error('TikTok Token Error:', tokenData.error, tokenData.error_description)
+        throw new Error(tokenData.error_description || tokenData.error)
+      }
     } else if (platform === 'youtube') {
       const resp = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -67,7 +86,7 @@ export async function GET(
         }),
       })
       tokenData = await resp.json()
-      if (tokenData.error) throw new Error(tokenData.error)
+      if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error)
     }
 
     // Store in social_accounts
