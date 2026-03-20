@@ -72,16 +72,20 @@ export async function POST(request: Request) {
           console.log(`Uploading generated base64 image to Supabase...`)
           const contentType = imageUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
           const base64Data = imageUrl.split(',')[1];
-          // Critical fix: Next.js/undici fetch breaks when passing Node Buffers directly to Supabase storage.
-          // We must wrap it in a standard Web Blob.
-          const buffer = Buffer.from(base64Data, 'base64');
-          const blob = new Blob([buffer], { type: contentType });
+          
+          // Guaranteed binary safety: decode base64 to standard ArrayBuffer manually
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
           const ext = contentType === 'image/png' ? 'png' : 'jpg';
           const filename = `generation_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('generated-images')
-            .upload(filename, blob, {
+            .upload(filename, bytes.buffer, {
               contentType: contentType,
               upsert: false
             });
@@ -97,6 +101,9 @@ export async function POST(request: Request) {
             
           imageUrl = publicUrlData.publicUrl;
           console.log(`Successfully uploaded image to Supabase: ${imageUrl}`)
+          
+          // Wait 2000ms to allow Supabase global CDN to propagate before Facebook eagerly fetches it
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
         // 4. Store in scheduled_posts
