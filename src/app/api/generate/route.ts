@@ -66,12 +66,14 @@ export async function POST(request: Request) {
 
         // 3. Generate image (base64)
         let imageUrl = await aiService.generateImage(profile.business_description, content.caption)
+        let rawBase64ForMeta: string | undefined = undefined;
 
         // Upload to Supabase to convert to public URL, as Meta API requires it.
         if (imageUrl.startsWith('data:image')) {
           console.log(`Uploading generated base64 image to Supabase...`)
           const contentType = imageUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
           const base64Data = imageUrl.split(',')[1];
+          rawBase64ForMeta = base64Data;
           
           // Guaranteed binary safety: decode base64 to standard ArrayBuffer manually
           const binaryString = atob(base64Data);
@@ -121,7 +123,8 @@ export async function POST(request: Request) {
             console.log(`Publishing now to Facebook Page: ${account.platform_name}`)
             const pubResult = await metaService.publishToFacebook(account.access_token, account.platform_user_id, {
               imageUrl: imageUrl,
-              caption: `${content.hook}\n\n${content.caption}\n\n${content.cta}\n\n${content.hashtags}`
+              caption: `${content.hook}\n\n${content.caption}\n\n${content.cta}\n\n${content.hashtags}`,
+              base64Image: rawBase64ForMeta
             })
             
             if (pubResult.id) {
