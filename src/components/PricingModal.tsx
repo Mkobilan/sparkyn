@@ -2,23 +2,21 @@
 
 import { PRICING_TIERS } from '@/lib/pricing'
 import { Check, Zap, Sparkles, Building, ChevronRight, Loader2, AlertTriangle } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 
-export default function PricingModal() {
+function PricingModalContent() {
+  const searchParams = useSearchParams()
+  const errorMsg = searchParams.get('message')
   const [loadingTier, setLoadingTier] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Check for error messages in the URL (from checkout failure)
-    const params = new URLSearchParams(window.location.search)
-    const msg = params.get('message')
-    if (msg) setError(decodeURIComponent(msg))
-  }, [])
+  const [internalError, setInternalError] = useState<string | null>(null)
 
   const handleSubscribe = (tierId: string) => {
     setLoadingTier(tierId)
     window.location.href = `/api/checkout?tier=${tierId}`
   }
+
+  const error = errorMsg || internalError
 
   // Define some custom colors based on globals.css variables
   const primaryColor = 'hsl(var(--primary))'
@@ -86,7 +84,7 @@ export default function PricingModal() {
               <p style={{ opacity: 0.8, fontSize: '0.8rem' }}>{error}</p>
             </div>
             <button 
-              onClick={() => setError(null)}
+              onClick={() => setInternalError(null)}
               style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.5 }}
             >
               &times;
@@ -277,5 +275,17 @@ export default function PricingModal() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function PricingModal() {
+  return (
+    <Suspense fallback={
+       <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backgroundColor: '#050505', display: 'flex', alignItems: 'center', justifySelf: 'center' }}>
+         <Loader2 size={40} className="animate-spin text-primary" />
+       </div>
+    }>
+      <PricingModalContent />
+    </Suspense>
   )
 }
