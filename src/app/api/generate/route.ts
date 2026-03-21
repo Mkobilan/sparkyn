@@ -6,7 +6,7 @@ import { tiktokService } from '../../../services/social/tiktok'
 import { NextResponse } from 'next/server'
 
 // Video generation (AI images + TTS + FFmpeg) needs extended timeout
-export const maxDuration = 120; // seconds (Vercel Pro: up to 300s, Hobby: up to 60s)
+export const maxDuration = 60; // seconds (Hobby plan max)
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
@@ -80,19 +80,28 @@ export async function POST(request: Request) {
         let mediaUrl = '';
         let rawBase64ForMeta: string | undefined = undefined;
 
+        let ttsDebug = '';
         try {
             if (account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' || isVideo) {
                  const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, content.caption);
-                 const imagePromises = imagePrompts.map(prompt => aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption, 768, 1344));
+                 // Optimize: 2 images at smaller resolution for faster generation within 60s limit
+                 const prompts = imagePrompts.slice(0, 2);
+                 const imagePromises = prompts.map(prompt => aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption, 512, 896));
                  const imagesBase64 = await Promise.all(imagePromises);
                  const { videoService } = await import('@/services/video');
-                 mediaUrl = await videoService.compileShortVideo(imagesBase64, script);
+                 const result = await videoService.compileShortVideo(imagesBase64, script);
+                 mediaUrl = result.videoDataUri;
+                 ttsDebug = result.ttsStatus;
             } else {
                  mediaUrl = await aiService.generateImage(imageContext, content.caption, 1024, 1024);
             }
 
-            // 3. STORAGE SYNC (Capture AI results to Supabase)
-            if (mediaUrl.startsWith('data:') || (mediaUrl.startsWith('http') && !mediaUrl.includes('supabase.co'))) {
+            // 3. STORAGE SYNC
+            // For video + direct publish: skip Supabase to save ~10s (pass data URI directly)
+            const isVideoContent = mediaUrl.startsWith('data:video');
+            const skipStorageForDirectPublish = isVideoContent && publishNow;
+
+            if (!skipStorageForDirectPublish && (mediaUrl.startsWith('data:') || (mediaUrl.startsWith('http') && !mediaUrl.includes('supabase.co')))) {
                 let bytes: Buffer;
                 let contentType: string;
 
@@ -178,6 +187,7 @@ export async function POST(request: Request) {
         if (post) {
             (post as any)._channelTitle = channelTitle;
             (post as any)._mediaSize = mediaUrl?.startsWith('data:video') ? Math.round(mediaUrl.length * 0.75 / 1024) + ' KB' : null;
+            (post as any)._ttsDebug = ttsDebug;
             generatedPosts.push(post);
         }
       } catch (loopErr: any) {
@@ -206,7 +216,8 @@ export async function POST(request: Request) {
         errors: generationErrors,
         postCount: generatedPosts.length,
         hasLinks: publishLinks.length > 0,
-        mediaSizes: generatedPosts.map(p => (p as any)._mediaSize)
+        mediaSizes: generatedPosts.map(p => (p as any)._mediaSize),
+        ttsStatus: generatedPosts.length > 0 ? (generatedPosts[0] as any)._ttsDebug : null,
       }
     });
 
