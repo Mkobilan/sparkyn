@@ -45,7 +45,15 @@ export default function SettingsPage() {
     setLoading(false)
   }
 
+  const [confirmDelete, setConfirmDelete] = useState('')
+
   const handleDeleteAccount = async () => {
+    const expected = profile.business_name?.trim() || 'DELETE'
+    if (confirmDelete !== expected) {
+      alert(`Please type "${expected}" to confirm.`)
+      return
+    }
+
     setDeleting(true)
     try {
       const response = await fetch('/api/user/delete', { method: 'POST' })
@@ -244,10 +252,14 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-3">
-                   <p className="text-xs font-bold text-white uppercase tracking-widest opacity-60">Confirm with your business name:</p>
+                   <p className="text-xs font-bold text-white uppercase tracking-widest opacity-60">
+                     Type <span className="text-destructive">"{profile.business_name?.trim() || 'DELETE'}"</span> to confirm:
+                   </p>
                    <input 
                      className="input border-destructive/20 focus:border-destructive" 
-                     placeholder={profile.business_name}
+                     value={confirmDelete}
+                     onChange={(e) => setConfirmDelete(e.target.value)}
+                     placeholder={profile.business_name?.trim() || 'DELETE'}
                      autoFocus
                    />
                 </div>
