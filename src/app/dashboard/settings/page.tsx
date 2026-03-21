@@ -87,35 +87,36 @@ export default function SettingsPage() {
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
         
         <div className="max-w-4xl space-y-8">
-          <div>
-            <h1 className="text-4xl font-black font-heading tracking-tight text-white mb-2">Settings</h1>
-            <p className="text-muted-foreground">Manage your business profile and creator preferences.</p>
+          <div className="mb-10">
+            <h1 className="text-5xl font-black font-heading tracking-tighter text-white mb-3">Settings</h1>
+            <p className="text-muted-foreground text-lg opacity-80">Manage your business profile and creator preferences.</p>
           </div>
 
-          <div className="glass rounded-[2rem] border border-border/50 overflow-hidden animate-fade-in-up">
-            <div className="p-8 border-b border-border/50 bg-white/5">
-              <h2 className="text-xl font-extrabold flex items-center gap-3 font-heading text-white">
-                <div className="p-2 bg-primary/20 rounded-lg">
-                  <Building className="w-5 h-5 text-primary" />
+          <div className="card-premium p-0 rounded-[2.5rem] border-border/50 overflow-hidden animate-fade-in-up">
+            <div className="p-10 border-b border-border/50 bg-white/5 relative overflow-hidden group">
+              <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all" />
+              <h2 className="text-2xl font-black flex items-center gap-4 font-heading text-white relative z-10">
+                <div className="p-3 bg-primary/20 rounded-2xl border border-primary/30">
+                  <Building className="w-6 h-6 text-primary" />
                 </div>
                 Business Profile
               </h2>
             </div>
           
-          <form onSubmit={handleSave} className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Business Name</label>
+          <form onSubmit={handleSave} className="p-10 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Business Name</label>
                 <input 
-                  className="input" 
+                  className="input h-14 rounded-2xl bg-muted/20 border-border/50 px-6 font-bold focus:bg-muted/40 transition-all" 
                   value={profile.business_name} 
                   onChange={(e) => setProfile({...profile, business_name: e.target.value})}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Industry</label>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Industry</label>
                 <select
-                  className="input"
+                  className="input h-14 rounded-2xl bg-muted/20 border-border/50 px-6 font-bold focus:bg-muted/40 transition-all appearance-none cursor-pointer"
                   value={profile.industry}
                   onChange={(e) => setProfile({...profile, industry: e.target.value})}
                 >
@@ -132,101 +133,106 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Company Description</label>
               <textarea 
-                className="input min-h-[100px]" 
+                className="input min-h-[120px] rounded-2xl bg-muted/20 border-border/50 px-6 py-4 font-bold focus:bg-muted/40 transition-all resize-none" 
                 value={profile.business_description} 
                 onChange={(e) => setProfile({...profile, business_description: e.target.value})}
+                placeholder="Tell Sparkyn about your business to improve AI accuracy..."
               />
             </div>
 
-            <div className="flex justify-end p-8 bg-white/5 -mx-8 -mb-8 border-t border-border/50">
-              <button disabled={loading} className="btn btn-primary gap-2 py-4 px-10 rounded-xl shadow-[0_8px_24px_-6px_hsla(var(--primary),0.5)]">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                <span className="font-bold">Save Profile</span>
+            <div className="flex justify-end p-10 bg-white/5 -mx-10 -mb-10 border-t border-border/50">
+              <button disabled={loading} className="btn btn-primary gap-3 py-4 px-12 rounded-2xl shadow-[0_8px_30px_-5px_hsla(var(--primary),0.5)] h-16 text-lg font-black transition-all hover:scale-105 active:scale-95">
+                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}
+                Save Changes
               </button>
             </div>
           </form>
         </div>
 
         {/* Subscription Section */}
-        <div className="glass rounded-[2rem] border border-border/50 overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-          <div className="p-8 border-b border-border/50 bg-white/5 flex items-center justify-between">
-            <h2 className="text-xl font-extrabold flex items-center gap-3 font-heading text-white">
-              <div className="p-2 bg-primary/20 rounded-lg">
-                <Zap className="w-5 h-5 text-primary" />
+        <div className="card-premium p-0 rounded-[2.5rem] border-primary/20 bg-primary/5 overflow-hidden animate-fade-in-up shadow-[0_0_50px_-10px_hsla(var(--primary),0.1)]" style={{ animationDelay: '100ms' }}>
+          <div className="p-10 border-b border-border/50 bg-white/5 flex items-center justify-between relative overflow-hidden group">
+             <div className="absolute -left-10 -top-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all opacity-50" />
+            <h2 className="text-2xl font-black flex items-center gap-4 font-heading text-white relative z-10">
+              <div className="p-3 bg-primary/20 rounded-2xl border border-primary/30">
+                <Zap className="w-6 h-6 text-primary" />
               </div>
               Subscription Plan
             </h2>
-            <div className="px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-lg text-primary text-[10px] font-black uppercase tracking-widest">
+            <div className="px-5 py-2 bg-primary/20 border border-primary/30 rounded-full text-primary text-[11px] font-black uppercase tracking-[0.2em] relative z-10 shadow-lg">
               {profile.subscription_tier || 'Free'} Tier
             </div>
           </div>
           
-          <div className="p-8 space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Daily Allowance</p>
-                <div className="flex items-end gap-2">
-                  <span className="text-3xl font-black text-white">{getTierLimits(profile.subscription_tier).postsPerDay}</span>
-                  <span className="text-xs text-muted-foreground pb-1">posts / day / channel</span>
+          <div className="p-10 space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="p-8 rounded-[2rem] bg-muted/20 border border-border/50 space-y-3 relative group/stat overflow-hidden hover:border-primary/30 transition-all">
+                <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-primary/5 rounded-full blur-2xl group-hover/stat:bg-primary/10 transition-all" />
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground opacity-60">Daily Allowance</p>
+                <div className="flex items-end gap-3">
+                  <span className="text-5xl font-black text-white tracking-tighter">{getTierLimits(profile.subscription_tier).postsPerDay}</span>
+                  <span className="text-sm text-muted-foreground pb-2 font-bold font-heading">posts / day / channel</span>
                 </div>
               </div>
               
-              <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Account Limit</p>
-                <div className="flex items-end gap-2">
-                  <span className="text-3xl font-black text-white">
+              <div className="p-8 rounded-[2rem] bg-muted/20 border border-border/50 space-y-3 relative group/stat overflow-hidden hover:border-primary/30 transition-all">
+                <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-primary/5 rounded-full blur-2xl group-hover/stat:bg-primary/10 transition-all" />
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground opacity-60">Account Limit</p>
+                <div className="flex items-end gap-3">
+                  <span className="text-5xl font-black text-white tracking-tighter">
                     {getTierLimits(profile.subscription_tier).accountsPerPlatform === 100 ? '∞' : getTierLimits(profile.subscription_tier).accountsPerPlatform}
                   </span>
-                  <span className="text-xs text-muted-foreground pb-1">accounts / platform</span>
+                  <span className="text-sm text-muted-foreground pb-2 font-bold font-heading">accounts / platform</span>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <p className="text-sm font-bold text-white">Included Features:</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-5">
+              <p className="text-sm font-black text-white uppercase tracking-widest opacity-60 ml-1">Included Features:</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(PRICING_TIERS.find(t => t.id === profile.subscription_tier) || PRICING_TIERS[0]).features.map((feature, i) => (
-                  <div key={i} className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                    {feature}
+                  <div key={i} className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/10 p-4 rounded-xl border border-white/5">
+                    <div className="p-1 rounded-full bg-primary/20">
+                      <Check className="w-4 h-4 text-primary shrink-0" />
+                    </div>
+                    <span className="font-bold">{feature}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {profile.subscription_tier !== 'enterprise' && (
-              <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="space-y-1">
-                  <p className="font-bold text-white">Need more capacity?</p>
-                  <p className="text-xs text-muted-foreground">Upgrade to a higher tier to unlock more daily posts and accounts.</p>
+              <div className="p-10 rounded-[2rem] bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-8 shadow-inner relative overflow-hidden group/cta">
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-primary/10 rounded-full blur-[80px] group-hover/cta:bg-primary/20 transition-all" />
+                <div className="space-y-2 relative z-10">
+                  <p className="text-xl font-black text-white">Need more capacity?</p>
+                  <p className="text-sm text-muted-foreground font-medium opacity-80">Upgrade to a higher tier to unlock more daily posts and accounts on every platform.</p>
                 </div>
                 <button 
                   onClick={() => setShowUpgradeModal(true)}
-                  className="btn btn-primary px-8 py-3 rounded-xl font-bold gap-2 whitespace-nowrap shadow-[0_8px_20px_-6px_hsla(var(--primary),0.4)]"
+                  className="btn btn-primary h-14 px-10 rounded-2xl font-black gap-3 text-lg shadow-[0_10px_30px_-5px_hsla(var(--primary),0.5)] transition-all hover:scale-105 active:scale-95 relative z-10"
                 >
-                  Upgrade Plan <Zap className="w-4 h-4 fill-black" />
+                  View Plans <Zap className="w-5 h-5 fill-black" />
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        <div className="glass p-8 rounded-[2rem] border border-destructive/20 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold text-destructive font-heading mb-1">Danger Zone</h3>
-              <p className="text-sm text-muted-foreground">Permanently delete your account and all AI data.</p>
-            </div>
-            <button 
-              onClick={() => setShowDeleteModal(true)}
-              className="btn btn-ghost text-destructive hover:bg-destructive/10 border border-destructive/10 text-xs font-black uppercase tracking-widest px-6"
-            >
-              <Trash2 className="w-4 h-4 mr-2" /> Delete Account
-            </button>
+        <div className="card-premium p-10 rounded-[2.5rem] border-destructive/20 bg-destructive/5 flex flex-col md:flex-row items-center justify-between gap-10">
+          <div className="space-y-2">
+            <h3 className="text-2xl font-black text-destructive font-heading">Danger Zone</h3>
+            <p className="text-muted-foreground font-medium text-lg opacity-80">Permanently delete your account and all AI generation data.</p>
           </div>
+          <button 
+            onClick={() => setShowDeleteModal(true)}
+            className="btn btn-ghost text-destructive hover:bg-destructive/10 border border-destructive/20 h-14 px-10 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all"
+          >
+            <Trash2 className="w-5 h-5 mr-3" /> Terminate Account
+          </button>
         </div>
 
         {/* Delete Confirmation Modal */}

@@ -110,26 +110,35 @@ export default function DashboardPage() {
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
 
         {/* Header */}
-        <div className="flex justify-between items-center bg-card/30 p-8 rounded-[2rem] border border-border shadow-2xl backdrop-blur-md">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="badge bg-success/10 text-success border border-success/20">
-                <TrendingUp className="w-3 h-3" /> System Online
-              </span>
+        <div className="card-premium p-10 rounded-[2.5rem] mb-10 border-primary/20 bg-primary/5 shadow-[0_0_50px_-12px_hsla(var(--primary),0.2)] backdrop-blur-md relative overflow-hidden group">
+          <div className="absolute -right-20 -top-20 w-80 h-80 bg-primary/10 rounded-full blur-[100px] group-hover:bg-primary/20 transition-all duration-700" />
+          <div className="flex justify-between items-center relative z-10">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="badge bg-success/10 text-success border border-success/20 py-1.5 px-4 rounded-full">
+                  <div className="w-2 h-2 rounded-full bg-success animate-pulse mr-1" />
+                  <TrendingUp className="w-3 h-3 mr-1" /> System Online
+                </span>
+                {profile?.subscription_tier && (
+                  <span className="badge bg-primary/10 text-primary border border-primary/20 py-1.5 px-4 rounded-full font-black uppercase tracking-widest text-[10px]">
+                    {profile.subscription_tier} Tier
+                  </span>
+                )}
+              </div>
+              <h1 className="text-5xl font-black tracking-tighter font-heading text-white">
+                {profile?.business_name ? `Grow, ${profile.business_name}` : 'Welcome back, Grower!'}
+              </h1>
+              <p className="text-muted-foreground text-lg font-medium opacity-80">Your content engine is currently active and processing daily.</p>
             </div>
-            <h1 className="text-4xl font-extrabold tracking-tight font-heading">
-              {profile?.business_name ? `Grow, ${profile.business_name}` : 'Welcome back, Grower!'}
-            </h1>
-            <p className="text-muted-foreground font-medium">Your engine is primed and content is being generated daily.</p>
+            <button 
+              onClick={handleGenerate} 
+              disabled={isGenerating}
+              className="btn btn-primary h-16 px-10 text-lg font-black gap-3 shadow-[0_0_40px_-5px_hsla(var(--primary),0.5)] transition-all hover:scale-105 active:scale-95 rounded-2xl"
+            >
+              {isGenerating ? <Loader2 className="w-7 h-7 animate-spin" /> : <div className="p-2 bg-black/10 rounded-xl"><Plus className="w-6 h-6" /></div>}
+              {isGenerating ? 'Firing AI...' : 'Generate Content'}
+            </button>
           </div>
-          <button 
-            onClick={handleGenerate} 
-            disabled={isGenerating}
-            className="btn btn-primary h-14 px-8 text-md font-bold gap-3 shadow-[0_0_30px_-5px_hsla(var(--primary),0.4)] transition-all hover:scale-105 active:scale-95"
-          >
-            {isGenerating ? <Loader2 className="w-6 h-6 animate-spin" /> : <div className="p-1.5 bg-black/10 rounded-lg"><Plus className="w-5 h-5" /></div>}
-            {isGenerating ? 'Firing AI...' : 'Generate New Content'}
-          </button>
         </div>
 
         {/* Success Modal */}
@@ -212,18 +221,18 @@ export default function DashboardPage() {
         )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {stats.map((stat) => (
-            <div key={stat.name} className="card p-6 flex flex-col justify-between group h-40">
-              <div className="flex justify-between items-start">
-                <div className={`p-3 rounded-2xl bg-muted/50 border border-border group-hover:border-primary/30 transition-colors`}>
-                  <stat.icon className={`w-6 h-6 ${stat.color} transition-all group-hover:scale-110`} />
+            <div key={stat.name} className="card-premium p-8 group h-44 hover-glow">
+              <div className="flex justify-between items-start mb-6">
+                <div className={`p-4 rounded-2xl bg-muted/50 border border-border group-hover:border-primary/30 transition-all duration-300`}>
+                  <stat.icon className={`w-7 h-7 ${stat.color} transition-all group-hover:scale-110`} />
                 </div>
-                <div className="w-1.5 h-1.5 rounded-full bg-border group-hover:bg-primary transition-colors" />
+                <div className="w-2 h-2 rounded-full bg-border group-hover:bg-primary transition-colors duration-500" />
               </div>
               <div>
-                <h3 className="text-3xl font-black mt-2 font-heading">{stat.value}</h3>
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{stat.name}</p>
+                <h3 className="text-4xl font-black font-heading text-white">{stat.value}</h3>
+                <p className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mt-1">{stat.name}</p>
               </div>
             </div>
           ))}
@@ -241,28 +250,31 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-5">
               {queue.map((post) => (
-                <div key={post.id} className="card p-4 flex gap-6 items-center group relative overflow-hidden">
-                  <div className="w-32 h-32 rounded-xl overflow-hidden shrink-0 border border-border bg-muted">
-                    <img src={post.image_url} alt="Post preview" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <div key={post.id} className="card-premium p-6 flex gap-8 items-center group hover:border-primary/20 transition-all">
+                  <div className="w-28 h-28 rounded-2xl overflow-hidden shrink-0 border border-border bg-muted relative">
+                    <img src={post.image_url} alt="Post preview" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-100" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                   </div>
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded border border-primary/10">
+                  <div className="flex-1 min-w-0 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-[0.15em] bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
                         {new Date(post.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric' })} at {new Date(post.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <p className="font-bold text-lg line-clamp-1 group-hover:text-primary transition-colors">{post.caption}</p>
-                    <div className="flex gap-1.5">
+                    <p className="font-extrabold text-xl line-clamp-1 group-hover:text-primary transition-colors tracking-tight">{post.caption}</p>
+                    <div className="flex gap-2">
                       {post.platforms.map((p: string) => (
-                        <span key={p} className="px-2 py-0.5 rounded-md border border-border bg-muted/30 text-[9px] uppercase font-heavy tracking-tighter">
+                        <span key={p} className="px-2.5 py-1 rounded-lg border border-border bg-muted/30 text-[9px] uppercase font-black tracking-widest text-muted-foreground">
                           {p}
                         </span>
                       ))}
                     </div>
                   </div>
-                  <ChevronRight className="w-6 h-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
+                  <div className="p-3 rounded-full bg-muted/50 border border-border opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1">
+                    <ChevronRight className="w-5 h-5 text-primary" />
+                  </div>
                 </div>
               ))}
               {queue.length === 0 && !loading && (

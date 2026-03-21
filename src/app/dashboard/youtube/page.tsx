@@ -130,27 +130,27 @@ export default function YoutubeDashboard() {
 
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
-          <div className="flex justify-between items-end">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-4">
-                <div className="p-3 bg-[#FF0000]/10 rounded-2xl border border-[#FF0000]/20">
-                  <Youtube className="w-10 h-10 text-[#FF0000]" />
+          <div className="flex justify-between items-end mb-10">
+            <div className="space-y-3">
+              <div className="flex items-center gap-5">
+                <div className="p-4 bg-[#FF0000]/10 rounded-2xl border border-[#FF0000]/20 shadow-[0_0_30px_-5px_#FF000033]">
+                  <Youtube className="w-12 h-12 text-[#FF0000]" />
                 </div>
-                YouTube Channels
-              </h1>
-              <p className="text-muted-foreground font-medium max-w-md">
-                Manage your YouTube channels, coordinate Shorts strategy, and automate video descriptions.
-              </p>
+                <div>
+                  <h1 className="text-5xl font-black tracking-tighter font-heading text-white">YouTube Channels</h1>
+                  <p className="text-muted-foreground text-lg font-medium opacity-80 mt-1">Manage, optimize, and automate your YouTube Shorts presence.</p>
+                </div>
+              </div>
             </div>
             <div className="flex gap-4">
                <button 
                 onClick={() => fetchChannels()}
-                className="btn btn-outline h-14 w-14 p-0 rounded-2xl border-border/50"
+                className="btn btn-outline h-16 w-16 p-0 rounded-2xl border-border/50 hover:border-[#FF0000]/30 transition-all"
               >
-                <RefreshCw className={`w-6 h-6 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-7 h-7 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              <Link href="/dashboard/connect" className="btn btn-primary h-14 px-8 rounded-2xl font-bold gap-3 shadow-lg">
-                <Plus className="w-5 h-5" /> Link Channel
+              <Link href="/dashboard/connect" className="btn btn-primary h-16 px-10 rounded-2xl font-black gap-3 shadow-[0_10px_30px_-5px_hsla(var(--primary),0.5)] text-lg">
+                <Plus className="w-6 h-6" /> Link Channel
               </Link>
             </div>
           </div>
@@ -158,31 +158,31 @@ export default function YoutubeDashboard() {
           {/* Channels Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {channels.map((channel) => (
-              <div key={channel.id} className="card p-8 space-y-6 hover:border-[#FF0000]/40 transition-all group overflow-hidden relative">
-                <div className="absolute -right-4 -top-4 w-32 h-32 bg-[#FF0000]/5 rounded-full blur-3xl group-hover:bg-[#FF0000]/10 transition-all" />
+              <div key={channel.id} className="card-premium p-10 space-y-8 hover:border-[#FF0000]/40 transition-all group overflow-hidden relative shadow-[0_0_50px_-15px_#FF00001a]">
+                <div className="absolute -right-4 -top-4 w-40 h-40 bg-[#FF0000]/5 rounded-full blur-3xl group-hover:bg-[#FF0000]/10 transition-all" />
                 
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-[#FF0000]/10 border border-[#FF0000]/20 flex items-center justify-center font-black text-2xl group-hover:scale-110 transition-transform duration-500 overflow-hidden">
-                      <Play className="w-8 h-8 text-[#FF0000]" fill="currentColor" />
+                <div className="flex justify-between items-start relative z-10">
+                  <div className="flex items-center gap-5">
+                    <div className="w-20 h-20 rounded-full bg-[#FF0000]/10 border border-[#FF0000]/20 flex items-center justify-center font-black text-3xl group-hover:scale-110 transition-transform duration-500 overflow-hidden shadow-xl">
+                      <Play className="w-10 h-10 text-[#FF0000]" fill="currentColor" />
                     </div>
                     <div>
-                      <h3 className="font-extrabold text-xl group-hover:text-[#FF0000] transition-colors">{channel.platform_name || 'YouTube Channel'}</h3>
-                      <p className="text-xs text-muted-foreground uppercase font-black tracking-widest">Main Channel</p>
+                      <h3 className="font-black text-2xl text-white group-hover:text-[#FF0000] transition-colors tracking-tight">{channel.platform_name || 'YouTube Channel'}</h3>
+                      <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.2em]">Main Channel</p>
                     </div>
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${channel.is_active ? 'bg-success/10 text-success border-success/20' : 'bg-muted text-muted-foreground'}`}>
+                  <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-lg ${channel.is_active ? 'bg-success/10 text-success border-success/20' : 'bg-muted text-muted-foreground border-border/50'}`}>
                     {channel.is_active ? 'Active' : 'Paused'}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tube Strategy</label>
+                <div className="grid grid-cols-2 gap-6 relative z-10">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Tube Strategy</label>
                     <select 
                       value={channel.content_strategy}
                       onChange={(e) => updateStrategy(channel.id, e.target.value)}
-                      className="w-full bg-muted border-border font-bold text-sm h-12 rounded-xl focus:ring-[#FF0000] appearance-none cursor-pointer"
+                      className="w-full bg-muted/30 border-border/50 font-black text-[11px] h-14 rounded-2xl focus:ring-[#FF0000] appearance-none cursor-pointer px-5 transition-all hover:bg-muted/50 uppercase tracking-widest text-white"
                     >
                       <option>Balanced</option>
                       <option>Educational</option>
@@ -191,37 +191,38 @@ export default function YoutubeDashboard() {
                       <option>Shorts-Only</option>
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Custom Schedule</label>
-                    <div className="h-12 bg-muted rounded-xl flex items-center px-4 font-bold text-sm border border-border/50">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Schedule</label>
+                    <div className="h-14 bg-muted/30 rounded-2xl flex items-center px-5 font-bold text-sm border border-border/50 hover:bg-muted/50 transition-all text-[#FF0000]">
                       <input 
                         type="datetime-local" 
                         value={scheduledTimes[channel.id] || ''}
                         onChange={(e) => setScheduledTimes({ ...scheduledTimes, [channel.id]: e.target.value })}
-                        className="bg-transparent border-none outline-none w-full text-white cursor-pointer"
+                        className="bg-transparent border-none outline-none w-full text-white cursor-pointer invert brightness-200"
+                        style={{ colorScheme: 'dark' }}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 relative z-10">
                   <button 
                     onClick={() => handleGenerate(channel.id, true)}
                     disabled={!!generatingId}
-                    className="flex-1 btn btn-primary bg-[#FF0000] border-[#FF0000] hover:bg-[#FF0000]/90 text-white font-bold gap-2 py-4 rounded-xl shadow-[0_4px_14px_0_rgba(255,0,0,0.39)]"
+                    className="flex-1 btn btn-primary bg-[#FF0000] border-[#FF0000] hover:bg-[#FF0000]/90 text-white font-black uppercase tracking-widest text-[11px] gap-2 h-16 rounded-2xl shadow-[0_10px_30px_-5px_#FF000066] transition-all hover:scale-105 active:scale-95"
                   >
-                    {generatingId === channel.id ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Sparkles className="w-4 h-4 text-white" />}
-                    Publish Now
+                    {generatingId === channel.id ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Sparkles className="w-5 h-5 text-white" />}
+                    Publish Shorts
                   </button>
                   <button 
                     onClick={() => handleGenerate(channel.id, false)}
                     disabled={!!generatingId}
-                    className="flex-1 btn btn-outline border-[#FF0000]/20 hover:bg-[#FF0000]/10 text-[#FF0000] font-bold gap-2 py-4 rounded-xl"
+                    className="flex-1 btn btn-outline border-[#FF0000]/30 hover:bg-[#FF0000]/10 text-[#FF0000] font-black uppercase tracking-widest text-[11px] gap-2 h-16 rounded-2xl transition-all"
                   >
                     Schedule AI
                   </button>
-                  <button onClick={() => handleEditClick(channel)} className={`btn w-14 h-14 p-0 rounded-xl border ${editingId === channel.id ? 'bg-[#FF0000]/10 border-[#FF0000] text-[#FF0000]' : 'btn-ghost border-border/50 text-muted-foreground'}`}>
-                    <Settings2 className="w-5 h-5 cursor-pointer" />
+                  <button onClick={() => handleEditClick(channel)} className={`btn w-16 h-16 p-0 rounded-2xl border ${editingId === channel.id ? 'bg-[#FF0000]/20 border-[#FF0000] text-[#FF0000] shadow-lg' : 'btn-ghost border-border/50 text-muted-foreground'} transition-all`}>
+                    <Settings2 className="w-7 h-7 cursor-pointer" />
                   </button>
                 </div>
 

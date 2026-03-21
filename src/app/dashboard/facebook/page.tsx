@@ -177,59 +177,59 @@ export default function FacebookDashboard() {
 
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
-          <div className="flex justify-between items-end">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-4">
-                <div className="p-3 bg-[#1877F2]/10 rounded-2xl border border-[#1877F2]/20">
-                  <Facebook className="w-10 h-10 text-[#1877F2]" />
+          <div className="flex justify-between items-end mb-10">
+            <div className="space-y-3">
+              <div className="flex items-center gap-5">
+                <div className="p-4 bg-[#1877F2]/10 rounded-2xl border border-[#1877F2]/20 shadow-[0_0_30px_-5px_hsla(214,89%,52%,0.2)]">
+                  <Facebook className="w-12 h-12 text-[#1877F2]" />
                 </div>
-                Facebook Pages
-              </h1>
-              <p className="text-muted-foreground font-medium max-w-md">
-                Manage your connected Facebook pages, set individual strategies, and automate your presence.
-              </p>
+                <div>
+                  <h1 className="text-5xl font-black tracking-tighter font-heading text-white">Facebook Pages</h1>
+                  <p className="text-muted-foreground text-lg font-medium opacity-80 mt-1">Manage, strategize, and automate your Facebook presence.</p>
+                </div>
+              </div>
             </div>
             <div className="flex gap-4">
                <button 
                 onClick={() => fetchPages()}
-                className="btn btn-outline h-14 w-14 p-0 rounded-2xl border-border/50"
+                className="btn btn-outline h-16 w-16 p-0 rounded-2xl border-border/50 hover:border-[#1877F2]/30 transition-all"
               >
-                <RefreshCw className={`w-6 h-6 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-7 h-7 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              <Link href="/dashboard/connect" className="btn btn-primary h-14 px-8 rounded-2xl font-bold gap-3 shadow-lg">
-                <Plus className="w-5 h-5" /> Connect New Page
+              <Link href="/dashboard/connect" className="btn btn-primary h-16 px-10 rounded-2xl font-black gap-3 shadow-[0_10px_30px_-5px_hsla(var(--primary),0.5)] text-lg">
+                <Plus className="w-6 h-6" /> Connect Page
               </Link>
             </div>
           </div>
 
           {/* Pages Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {pages.map((page) => (
-              <div key={page.id} className="card p-8 space-y-6 hover:border-[#1877F2]/40 transition-all group overflow-hidden relative">
-                <div className="absolute -right-4 -top-4 w-32 h-32 bg-[#1877F2]/5 rounded-full blur-3xl group-hover:bg-[#1877F2]/10 transition-all" />
+              <div key={page.id} className="card-premium p-10 space-y-8 hover:border-[#1877F2]/40 transition-all group overflow-hidden relative shadow-[0_0_50px_-15px_hsla(214,89%,52%,0.1)]">
+                <div className="absolute -right-4 -top-4 w-40 h-40 bg-[#1877F2]/5 rounded-full blur-3xl group-hover:bg-[#1877F2]/10 transition-all" />
                 
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-[#1877F2]/10 border border-[#1877F2]/20 flex items-center justify-center font-black text-2xl text-[#1877F2]">
+                <div className="flex justify-between items-start relative z-10">
+                  <div className="flex items-center gap-5">
+                    <div className="w-20 h-20 rounded-2xl bg-[#1877F2]/10 border border-[#1877F2]/20 flex items-center justify-center font-black text-3xl text-[#1877F2] shadow-inner group-hover:scale-110 transition-transform duration-500">
                       {page.platform_name?.[0] || 'F'}
                     </div>
                     <div>
-                      <h3 className="font-extrabold text-xl group-hover:text-[#1877F2] transition-colors">{page.platform_name || 'Unnamed Page'}</h3>
-                      <p className="text-xs text-muted-foreground uppercase font-black tracking-widest">{page.metadata?.category || 'Facebook Page'}</p>
+                      <h3 className="font-black text-2xl text-white group-hover:text-[#1877F2] transition-colors tracking-tight">{page.platform_name || 'Unnamed Page'}</h3>
+                      <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.2em]">{page.metadata?.category || 'Facebook Page'}</p>
                     </div>
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${page.is_active ? 'bg-success/10 text-success border-success/20' : 'bg-muted text-muted-foreground'}`}>
+                  <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-lg ${page.is_active ? 'bg-success/10 text-success border-success/20' : 'bg-muted text-muted-foreground border-border/50'}`}>
                     {page.is_active ? 'Active' : 'Paused'}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Content Strategy</label>
+                <div className="grid grid-cols-2 gap-6 relative z-10">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Strategy</label>
                     <select 
                       value={page.content_strategy}
                       onChange={(e) => updateStrategy(page.id, e.target.value)}
-                      className="w-full bg-muted border-border font-bold text-sm h-12 rounded-xl focus:ring-[#1877F2] appearance-none cursor-pointer"
+                      className="w-full bg-muted/30 border-border/50 font-black text-[11px] h-14 rounded-2xl focus:ring-[#1877F2] appearance-none cursor-pointer px-5 transition-all hover:bg-muted/50 uppercase tracking-widest text-white"
                     >
                       <option>Balanced</option>
                       <option>Casual</option>
@@ -239,55 +239,56 @@ export default function FacebookDashboard() {
                       <option>Storytelling</option>
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Custom Schedule</label>
-                    <div className="h-12 bg-muted rounded-xl flex items-center px-4 font-bold text-sm border border-border/50">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Schedule</label>
+                    <div className="h-14 bg-muted/30 rounded-2xl flex items-center px-5 font-bold text-sm border border-border/50 hover:bg-muted/50 transition-all">
                       <input 
                         type="datetime-local" 
                         value={scheduledTimes[page.id] || ''}
                         onChange={(e) => setScheduledTimes({ ...scheduledTimes, [page.id]: e.target.value })}
-                        className="bg-transparent border-none outline-none w-full text-white cursor-pointer"
+                        className="bg-transparent border-none outline-none w-full text-white cursor-pointer invert brightness-200"
+                        style={{ colorScheme: 'dark' }}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4 relative z-10">
                   <div className="flex gap-4">
                     <button 
                       onClick={() => handleGenerate(page.id, true, false)}
                       disabled={!!generatingId}
-                      className="flex-1 btn btn-primary font-bold gap-2 py-3 rounded-xl shadow-lg"
+                      className="flex-1 btn btn-primary font-black uppercase tracking-widest text-[11px] gap-2 h-14 rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95"
                     >
                       {generatingId === page.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                      Publish Image
+                      Post Image
                     </button>
                     <button 
                       onClick={() => handleGenerate(page.id, false, false)}
                       disabled={!!generatingId}
-                      className="flex-1 btn btn-outline border-[#1877F2]/20 hover:bg-[#1877F2]/10 text-[#1877F2] font-bold gap-2 py-3 rounded-xl"
+                      className="flex-1 btn btn-outline border-[#1877F2]/30 hover:bg-[#1877F2]/10 text-[#1877F2] font-black uppercase tracking-widest text-[11px] gap-2 h-14 rounded-2xl transition-all"
                     >
-                      Schedule AI Image
+                      Schedule AI
                     </button>
                   </div>
                   <div className="flex gap-4">
                     <button 
                       onClick={() => handleGenerate(page.id, true, true)}
                       disabled={!!generatingId}
-                      className="flex-1 btn bg-[#1877F2] hover:bg-[#1877F2]/90 text-white font-bold gap-2 py-3 rounded-xl shadow-lg"
+                      className="flex-1 btn bg-[#1877F2] hover:bg-[#1877F2]/90 text-white font-black uppercase tracking-widest text-[11px] gap-2 h-14 rounded-2xl shadow-[0_10px_30px_-5px_hsla(214,89%,52%,0.4)] transition-all hover:scale-105 active:scale-95"
                     >
                       {generatingId === page.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                      Publish Video
+                      Post Video
                     </button>
                     <button 
                       onClick={() => handleGenerate(page.id, false, true)}
                       disabled={!!generatingId}
-                      className="flex-1 btn btn-outline border-[#1877F2]/20 hover:bg-[#1877F2]/10 text-[#1877F2] font-bold gap-2 py-3 rounded-xl"
+                      className="flex-1 btn btn-outline border-[#1877F2]/30 hover:bg-[#1877F2]/10 text-[#1877F2] font-black uppercase tracking-widest text-[11px] gap-2 h-14 rounded-2xl transition-all"
                     >
-                      Schedule Video
+                      Schedule Reel
                     </button>
-                    <button onClick={() => handleEditClick(page)} className={`btn btn-ghost w-12 h-12 p-0 rounded-xl border ${editingId === page.id ? 'bg-primary/10 border-primary text-primary' : 'border-border/50 text-muted-foreground'}`}>
-                      <Settings2 className="w-5 h-5 cursor-pointer" />
+                    <button onClick={() => handleEditClick(page)} className={`btn btn-ghost w-14 h-14 p-0 rounded-2xl border ${editingId === page.id ? 'bg-primary/20 border-primary text-primary shadow-lg' : 'border-border/50 text-muted-foreground'} transition-all`}>
+                      <Settings2 className="w-6 h-6 cursor-pointer" />
                     </button>
                   </div>
                 </div>

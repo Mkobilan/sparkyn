@@ -162,61 +162,61 @@ export default function InstagramDashboard() {
 
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
-          <div className="flex justify-between items-end">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-4">
-                <div className="p-3 bg-[#E4405F]/10 rounded-2xl border border-[#E4405F]/20">
-                  <Instagram className="w-10 h-10 text-[#E4405F]" />
+          <div className="flex justify-between items-end mb-10">
+            <div className="space-y-3">
+              <div className="flex items-center gap-5">
+                <div className="p-4 bg-[#E4405F]/10 rounded-2xl border border-[#E4405F]/20 shadow-[0_0_30px_-5px_hsla(349,77%,57%,0.2)]">
+                  <Instagram className="w-12 h-12 text-[#E4405F]" />
                 </div>
-                Instagram Accounts
-              </h1>
-              <p className="text-muted-foreground font-medium max-w-md">
-                Manage your Instagram Business profiles, aesthetic strategies, and automated reels/posts.
-              </p>
+                <div>
+                  <h1 className="text-5xl font-black tracking-tighter font-heading text-white">Instagram Accounts</h1>
+                  <p className="text-muted-foreground text-lg font-medium opacity-80 mt-1">Manage, strategize, and automate your Instagram presence.</p>
+                </div>
+              </div>
             </div>
             <div className="flex gap-4">
                <button 
                 onClick={() => fetchAccounts()}
-                className="btn btn-outline h-14 w-14 p-0 rounded-2xl border-border/50"
+                className="btn btn-outline h-16 w-16 p-0 rounded-2xl border-border/50 hover:border-[#E4405F]/30 transition-all"
               >
-                <RefreshCw className={`w-6 h-6 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-7 h-7 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              <Link href="/dashboard/connect" className="btn btn-primary h-14 px-8 rounded-2xl font-bold gap-3 shadow-lg">
-                <Plus className="w-5 h-5" /> Connect Account
+              <Link href="/dashboard/connect" className="btn btn-primary h-16 px-10 rounded-2xl font-black gap-3 shadow-[0_10px_30px_-5px_hsla(var(--primary),0.5)] text-lg">
+                <Plus className="w-6 h-6" /> Connect Account
               </Link>
             </div>
           </div>
 
           {/* Accounts Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {accounts.map((account) => (
-              <div key={account.id} className="card p-8 space-y-6 hover:border-[#E4405F]/40 transition-all group overflow-hidden relative">
-                <div className="absolute -right-4 -top-4 w-32 h-32 bg-[#E4405F]/5 rounded-full blur-3xl group-hover:bg-[#E4405F]/10 transition-all" />
+              <div key={account.id} className="card-premium p-10 space-y-8 hover:border-[#E4405F]/40 transition-all group overflow-hidden relative shadow-[0_0_50px_-15px_hsla(349,77%,57%,0.1)]">
+                <div className="absolute -right-4 -top-4 w-40 h-40 bg-[#E4405F]/5 rounded-full blur-3xl group-hover:bg-[#E4405F]/10 transition-all" />
                 
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[1px] group-hover:scale-110 transition-transform duration-500">
-                      <div className="w-full h-full bg-background rounded-[15px] flex items-center justify-center font-black text-2xl">
+                <div className="flex justify-between items-start relative z-10">
+                  <div className="flex items-center gap-5">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[1px] group-hover:scale-110 transition-transform duration-500 shadow-xl">
+                      <div className="w-full h-full bg-background rounded-[15px] flex items-center justify-center font-black text-3xl">
                         {account.platform_name?.[0] || 'I'}
                       </div>
                     </div>
                     <div>
-                      <h3 className="font-extrabold text-xl group-hover:text-[#ee2a7b] transition-colors">{account.platform_name || 'Instagram Account'}</h3>
-                      <p className="text-xs text-muted-foreground uppercase font-black tracking-widest">Business Profile</p>
+                      <h3 className="font-black text-2xl text-white group-hover:text-[#ee2a7b] transition-colors tracking-tight">{account.platform_name || 'Instagram Account'}</h3>
+                      <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.2em]">Business Profile</p>
                     </div>
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${account.is_active ? 'bg-success/10 text-success border-success/20' : 'bg-muted text-muted-foreground'}`}>
+                  <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-lg ${account.is_active ? 'bg-success/10 text-success border-success/20' : 'bg-muted text-muted-foreground border-border/50'}`}>
                     {account.is_active ? 'Active' : 'Paused'}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aesthetic Strategy</label>
+                <div className="grid grid-cols-2 gap-6 relative z-10">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Strategy</label>
                     <select 
                       value={account.content_strategy}
                       onChange={(e) => updateStrategy(account.id, e.target.value)}
-                      className="w-full bg-muted border-border font-bold text-sm h-12 rounded-xl focus:ring-[#ee2a7b] appearance-none cursor-pointer"
+                      className="w-full bg-muted/30 border-border/50 font-black text-[11px] h-14 rounded-2xl focus:ring-[#ee2a7b] appearance-none cursor-pointer px-5 transition-all hover:bg-muted/50 uppercase tracking-widest text-white"
                     >
                       <option>Balanced</option>
                       <option>Minimalist</option>
@@ -225,55 +225,56 @@ export default function InstagramDashboard() {
                       <option>Story-Led</option>
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Custom Schedule</label>
-                    <div className="h-12 bg-muted rounded-xl flex items-center px-4 font-bold text-sm border border-border/50">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Schedule</label>
+                    <div className="h-14 bg-muted/30 rounded-2xl flex items-center px-5 font-bold text-sm border border-border/50 hover:bg-muted/50 transition-all text-[#ee2a7b]">
                       <input 
                         type="datetime-local" 
                         value={scheduledTimes[account.id] || ''}
                         onChange={(e) => setScheduledTimes({ ...scheduledTimes, [account.id]: e.target.value })}
-                        className="bg-transparent border-none outline-none w-full text-white cursor-pointer"
+                        className="bg-transparent border-none outline-none w-full text-white cursor-pointer invert brightness-200"
+                        style={{ colorScheme: 'dark' }}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4 relative z-10">
                   <div className="flex gap-4">
                     <button 
                       onClick={() => handleGenerate(account.id, true, false)}
                       disabled={!!generatingId}
-                      className="flex-1 btn btn-primary font-bold gap-2 py-3 rounded-xl shadow-lg"
+                      className="flex-1 btn btn-primary font-black uppercase tracking-widest text-[11px] gap-2 h-14 rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95"
                     >
                       {generatingId === account.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                      Publish Image
+                      Post Image
                     </button>
                     <button 
                       onClick={() => handleGenerate(account.id, false, false)}
                       disabled={!!generatingId}
-                      className="flex-1 btn btn-outline border-[#E4405F]/20 hover:bg-[#E4405F]/10 text-[#E4405F] font-bold gap-2 py-3 rounded-xl"
+                      className="flex-1 btn btn-outline border-[#E4405F]/30 hover:bg-[#E4405F]/10 text-[#E4405F] font-black uppercase tracking-widest text-[11px] gap-2 h-14 rounded-2xl transition-all"
                     >
-                      Schedule AI Image
+                      Schedule AI
                     </button>
                   </div>
                   <div className="flex gap-4">
                     <button 
                       onClick={() => handleGenerate(account.id, true, true)}
                       disabled={!!generatingId}
-                      className="flex-1 btn bg-gradient-to-r from-[#ee2a7b] to-[#6228d7] border-0 text-white font-bold gap-2 py-3 rounded-xl shadow-lg"
+                      className="flex-1 btn bg-gradient-to-r from-[#ee2a7b] to-[#6228d7] border-0 text-white font-black uppercase tracking-widest text-[11px] gap-2 h-14 rounded-2xl shadow-[0_10px_30px_-5px_hsla(335,84%,55%,0.4)] transition-all hover:scale-105 active:scale-95"
                     >
                       {generatingId === account.id ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Sparkles className="w-4 h-4 text-white" />}
-                      Publish Video
+                      Post Reel
                     </button>
                     <button 
                       onClick={() => handleGenerate(account.id, false, true)}
                       disabled={!!generatingId}
-                      className="flex-1 btn btn-outline border-[#E4405F]/20 hover:bg-[#E4405F]/10 text-[#E4405F] font-bold gap-2 py-3 rounded-xl"
+                      className="flex-1 btn btn-outline border-[#E4405F]/30 hover:bg-[#E4405F]/10 text-[#E4405F] font-black uppercase tracking-widest text-[11px] gap-2 h-14 rounded-2xl transition-all"
                     >
-                      Schedule Video
+                      Schedule Reel
                     </button>
-                    <button onClick={() => handleEditClick(account)} className={`btn w-12 h-12 p-0 rounded-xl border ${editingId === account.id ? 'bg-[#E4405F]/10 border-[#E4405F] text-[#E4405F]' : 'btn-ghost border-border/50 text-muted-foreground'}`}>
-                      <Settings2 className="w-5 h-5 cursor-pointer" />
+                    <button onClick={() => handleEditClick(account)} className={`btn w-14 h-14 p-0 rounded-2xl border ${editingId === account.id ? 'bg-[#E4405F]/20 border-[#E4405F] text-[#E4405F] shadow-lg' : 'btn-ghost border-border/50 text-muted-foreground'} transition-all`}>
+                      <Settings2 className="w-6 h-6 cursor-pointer" />
                     </button>
                   </div>
                 </div>
