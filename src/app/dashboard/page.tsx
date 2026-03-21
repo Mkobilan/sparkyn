@@ -15,7 +15,8 @@ import {
   Sparkles,
   Zap,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
