@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Sparkles, ArrowRight, Zap, Globe, ShieldCheck, BarChart3, Clock, Layers, ChevronRight, Check } from 'lucide-react'
 import { PRICING_TIERS } from '@/lib/pricing'
 
