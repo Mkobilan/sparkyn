@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Sparkles, Mail, Lock, ArrowRight, Loader2, User, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 
-export default function SignupPage() {
+function SignupContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -181,5 +181,17 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }} className="bg-gradient">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    }>
+      <SignupContent />
+    </Suspense>
   )
 }
