@@ -40,19 +40,25 @@ export class VideoService {
             // Attempt 1: ElevenLabs (if key exists)
             if (elevenLabsKey) {
                 try {
-                    console.log("Attempting ElevenLabs TTS...");
+                    console.log("Attempting ElevenLabs TTS (3s timeout)...");
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
                     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgH9P3Od9pJC`, {
                         method: 'POST',
                         headers: {
                             'xi-api-key': elevenLabsKey,
                             'Content-Type': 'application/json',
                         },
+                        signal: controller.signal,
                         body: JSON.stringify({
                             text: safeScript,
                             model_id: "eleven_monolingual_v1",
                             voice_settings: { stability: 0.5, similarity_boost: 0.5 }
                         })
                     });
+                    
+                    clearTimeout(timeoutId);
 
                     if (!response.ok) {
                         const errText = await response.text();
@@ -66,8 +72,9 @@ export class VideoService {
                     ttsStatus = 'elevenlabs_success';
                     console.log(`ElevenLabs TTS Success: ${audioBuffer.byteLength} bytes`);
                 } catch (e: any) {
-                    console.warn("ElevenLabs failed:", e.message);
-                    ttsStatus = `elevenlabs_failed: ${e.message.slice(0, 80)}`;
+                    const isTimeout = e.name === 'AbortError';
+                    console.warn(isTimeout ? "ElevenLabs timed out after 3s." : "ElevenLabs failed:", e.message);
+                    ttsStatus = `elevenlabs_failed: ${isTimeout ? 'timeout' : e.message.slice(0, 80)}`;
                 }
             }
 

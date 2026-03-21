@@ -35,7 +35,11 @@ export async function POST(request: Request) {
         let mediaUrl = '';
 
         if (isVideo) {
-          const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, contentContext);
+          // Parallelize for speed
+          const [{ script, imagePrompts }] = await Promise.all([
+            aiService.generateShortVideoScript(imageContext, contentContext)
+          ]);
+
           // 1 Image Mode for Hobby Speed
           const imageBase64 = await aiService.generateImage(`Context: ${imageContext}. Subject: ${imagePrompts[0]}`, contentContext, 512, 896);
           const { videoService } = await import('@/services/video');

@@ -60,23 +60,32 @@ export async function POST(request: Request) {
         console.error("Token refresh failed:", refreshErr);
         // Continue anyway, maybe the token still works or the error is transient
       }
-
       try {
-        // 1. CONTENT GENERATION
-        const content = await aiService.generateContent({
-          businessName: account.metadata?.business_name || profile.business_name,
-          industry: account.metadata?.industry || profile.industry,
-          niche: account.metadata?.niche || profile.niche_description,
-          description: account.metadata?.description || profile.business_description,
-          goal: account.metadata?.goal || profile.primary_goal,
-          tone: account.content_strategy || profile.content_tone,
-          platform: account.platform as any,
-          websiteUrl: profile.website_url
-        })
+        const imageContext = `${account.metadata?.industry || profile.industry} business - ${account.metadata?.description || profile.business_description}`;
+
+        // 1. CONTENT & SCRIPT GENERATION (Parallel for speed)
+        console.time(`ai-generation-${account.platform}`);
+        const [content, videoScript] = await Promise.all([
+          aiService.generateContent({
+            businessName: account.metadata?.business_name || profile.business_name,
+            industry: account.metadata?.industry || profile.industry,
+            niche: account.metadata?.niche || profile.niche_description,
+            description: account.metadata?.description || profile.business_description,
+            goal: account.metadata?.goal || profile.primary_goal,
+            tone: account.content_strategy || profile.content_tone,
+            platform: account.platform as any,
+            websiteUrl: profile.website_url
+          }),
+          // Trigger script generation even if we don't know the caption yet (use business description as theme)
+          (account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' || isVideo)
+            ? aiService.generateShortVideoScript(imageContext, account.metadata?.description || profile.business_description)
+            : Promise.resolve(null)
+        ]);
+        console.timeEnd(`ai-generation-${account.platform}`);
+
         if (!content) throw new Error("AI returned no text content");
 
         // 2. MEDIA GENERATION
-        const imageContext = `${account.metadata?.industry || profile.industry} business - ${account.metadata?.description || profile.business_description}`;
         let mediaUrl = '';
         let rawBase64ForMeta: string | undefined = undefined;
         let ttsDebug = '';
@@ -85,15 +94,16 @@ export async function POST(request: Request) {
         // Otherwise, just save the AI content and let the user see it in the queue.
         if (publishNow) {
             try {
-                if (account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' || isVideo) {
-                     const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, content.caption);
+                if (videoScript) {
+                     console.time(`media-generation-${account.platform}`);
                      // Speed Mode: 1 image @ 512x896 = ~5s generation
-                     const prompt = imagePrompts[0];
+                     const prompt = videoScript.imagePrompts[0];
                      const imageBase64 = await aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption, 512, 896);
                      const { videoService } = await import('@/services/video');
-                     const result = await videoService.compileShortVideo([imageBase64], script);
+                     const result = await videoService.compileShortVideo([imageBase64], videoScript.script);
                      mediaUrl = result.videoDataUri;
                      ttsDebug = result.ttsStatus;
+                     console.timeEnd(`media-generation-${account.platform}`);
                 } else {
                      mediaUrl = await aiService.generateImage(imageContext, content.caption, 1024, 1024);
                 }
