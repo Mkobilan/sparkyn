@@ -30,7 +30,12 @@ export async function POST(request: Request) {
 
     const generatedPosts = []
     const generationErrors: string[] = []
-    const tierLimits = getTierLimits(profile.subscription_tier);
+    
+    // HARDCODE: Grant unlimited access to the specific developer/test account
+    const isUnlimited = user.email === 'matthew.kobilan@gmail.com';
+    const tierLimits = isUnlimited 
+      ? { postsPerDay: 999, accountsPerPlatform: 999 } 
+      : getTierLimits(profile.subscription_tier);
 
     // Get today's start and end times for limit checking
     const todayStart = new Date();
