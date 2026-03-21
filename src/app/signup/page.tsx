@@ -43,6 +43,7 @@ function SignupContent() {
       options: {
         data: {
           full_name: name,
+          tier: tier,
         },
         emailRedirectTo: `${window.location.origin}/auth/callback${tier ? `?next=/api/checkout?tier=${tier}` : ''}`,
       },

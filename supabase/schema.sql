@@ -23,8 +23,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id)
-  VALUES (new.id);
+  INSERT INTO public.profiles (id, pending_tier)
+  VALUES (
+    new.id, 
+    COALESCE(new.raw_user_meta_data->>'tier', NULL)
+  );
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
