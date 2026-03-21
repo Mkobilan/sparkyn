@@ -86,7 +86,7 @@ export default function DashboardPage() {
       }
       const data = await response.json()
       if (data.success) {
-        alert('Post published! (Speed Mode enabled)')
+        setLastResults(data);
         fetchDashboardData()
       } else {
         alert("Generation failed: " + data.error);
@@ -151,8 +151,12 @@ export default function DashboardPage() {
                   <CheckCircle2 className="w-10 h-10" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-2xl font-black font-heading">Content Primed!</h3>
-                  <p className="text-muted-foreground font-medium">Your new posts have been generated and scheduled.</p>
+                  <h3 className="text-2xl font-black font-heading">Content Priming...</h3>
+                  <p className="text-muted-foreground font-medium text-sm">
+                    {lastResults?.posts?.[0]?.status === 'published' 
+                      ? 'Your post is LIVE!' 
+                      : 'AI is generating your media in the background. Your post will be live in 1-2 minutes.'}
+                  </p>
                 </div>
               </div>
 

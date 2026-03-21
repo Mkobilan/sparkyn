@@ -64,11 +64,7 @@ export default function YoutubeDashboard() {
       }
       const data = await response.json()
       if (data.success) {
-        if (publishNow) {
-          alert('Short published to YouTube! (Speed Mode enabled)')
-        } else {
-          alert('Short scheduled! Media will be generated automatically in the background.')
-        }
+        alert('Content accepted! Our AI is generating your short in the background. It will be live in 1-2 minutes.')
         fetchChannels()
       } else {
         alert(`Failed: ${data.error || 'Unknown error'}`)

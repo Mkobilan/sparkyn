@@ -85,98 +85,27 @@ export async function POST(request: Request) {
 
         if (!content) throw new Error("AI returned no text content");
 
-        // 2. MEDIA GENERATION
-        let mediaUrl = '';
-        let rawBase64ForMeta: string | undefined = undefined;
-        let ttsDebug = '';
+        // 2. MEDIA GENERATION DEFERRAL (Zero-Timeout Architecture)
+        // We ALWAYS defer media generation to the background cron to avoid 504 timeouts.
+        // We set a placeholder URL that the Cron job will later replace.
+        // We append ?type=video if it's a video request so the cron knows what to generate.
+        const isVideoRequest = account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' || isVideo;
+        const pendingMediaUrl = `https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=1080&auto=format&fit=crop${isVideoRequest ? '&type=video' : ''}`;
+        let mediaUrl = pendingMediaUrl;
+        
+        // We save the AI-generated script/metadata in the DB if we have it (videoScript)
+        // If not, the Cron will regenerate it.
 
-        // Optimization for Vercel Hobby: Only generate media synchronously if "Publish Now" is true.
-        // Otherwise, just save the AI content and let the user see it in the queue.
-        if (publishNow) {
-            try {
-                if (videoScript) {
-                     console.time(`media-generation-${account.platform}`);
-                     // Speed Mode: 1 image @ 512x896 = ~5s generation
-                     const prompt = videoScript.imagePrompts[0];
-                     const imageBase64 = await aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption, 512, 896);
-                     const { videoService } = await import('@/services/video');
-                     const result = await videoService.compileShortVideo([imageBase64], videoScript.script);
-                     mediaUrl = result.videoDataUri;
-                     ttsDebug = result.ttsStatus;
-                     console.timeEnd(`media-generation-${account.platform}`);
-                } else {
-                     mediaUrl = await aiService.generateImage(imageContext, content.caption, 1024, 1024);
-                }
-
-                // 3. STORAGE SYNC
-                const isVideoContent = mediaUrl.startsWith('data:video');
-                const skipStorageForDirectPublish = isVideoContent && publishNow;
-
-                if (!skipStorageForDirectPublish && (mediaUrl.startsWith('data:') || (mediaUrl.startsWith('http') && !mediaUrl.includes('supabase.co')))) {
-                    let bytes: Buffer;
-                    let contentType: string;
-
-                    if (mediaUrl.startsWith('data:')) {
-                        contentType = mediaUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
-                        const base64Data = mediaUrl.split(',')[1];
-                        rawBase64ForMeta = base64Data;
-                        bytes = Buffer.from(base64Data, 'base64');
-                    } else {
-                        const mediaRes = await fetch(mediaUrl);
-                        if (!mediaRes.ok) throw new Error(`External status ${mediaRes.status}`);
-                        const ab = await mediaRes.arrayBuffer();
-                        bytes = Buffer.from(ab);
-                        contentType = mediaRes.headers.get('content-type') || 'image/jpeg';
-                    }
-
-                    const ext = contentType.includes('video') ? 'mp4' : (contentType.includes('png') ? 'png' : 'jpg');
-                    const filename = `${Math.random().toString(36).substring(7)}_${Date.now()}.${ext}`;
-                    const { error: upErr } = await supabase.storage.from('generated-images').upload(filename, bytes, { contentType: contentType });
-                    if (upErr) throw upErr;
-
-                    mediaUrl = supabase.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
-                }
-            } catch (mediaErr: any) {
-                console.error("AI Media failed, using Emergency Stock Fallback:", mediaErr.message || mediaErr);
-                mediaUrl = "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=1080&auto=format&fit=crop";
-            }
-        }
-
-        // 4. PUBLISHING
+        // 4. PUBLISHING DEFERRAL
         const scheduledTime = scheduledAt ? new Date(scheduledAt) : new Date();
+        // If "Publish Now" was requested, we set the schedule to NOW so the cron picks it up instantly
         let status = 'scheduled';
         let publishedAt = null;
         let platformPostId = null;
         let channelTitle = null;
 
-        if (publishNow) {
-          const pubParams = {
-            imageUrl: mediaUrl,
-            caption: `${content.hook}\n\n${content.caption}\n\n${content.cta}\n\n${content.hashtags}`,
-            base64Image: rawBase64ForMeta,
-            isVideo: isVideo
-          };
-
-          const pubResult = account.platform === 'facebook' 
-            ? await metaService.publishToFacebook(currentAccessToken, account.platform_user_id, pubParams)
-            : (account.platform === 'instagram' 
-               ? await metaService.publishToInstagram(currentAccessToken, account.platform_user_id, pubParams)
-               : (account.platform === 'youtube'
-                  ? await youtubeService.publishShort(currentAccessToken, { videoUrl: mediaUrl, title: content.hook, description: content.caption })
-                  : (account.platform === 'tiktok'
-                     ? await tiktokService.publishVideo(currentAccessToken, { videoUrl: mediaUrl, caption: content.caption })
-                     : { id: 'simulated_' + Date.now() })));
-
-          if ((pubResult.id || pubResult.data?.id) && !pubResult.error) {
-            status = 'published';
-            publishedAt = new Date().toISOString();
-            platformPostId = pubResult.id || pubResult.data?.id;
-            channelTitle = pubResult.channelTitle;
-          } else {
-            const errDetails = pubResult.error?.message || pubResult.error || JSON.stringify(pubResult);
-            throw new Error(`Platform Error: ${errDetails}`);
-          }
-        }
+        // No synchronous publishing block here!
+        // We move the publish logic entirely into the Cron job.
 
         const { data: post } = await supabase.from('scheduled_posts').insert({
             user_id: user.id,
@@ -195,8 +124,7 @@ export async function POST(request: Request) {
 
         if (post) {
             (post as any)._channelTitle = channelTitle;
-            (post as any)._mediaSize = mediaUrl?.startsWith('data:video') ? Math.round(mediaUrl.length * 0.75 / 1024) + ' KB' : null;
-            (post as any)._ttsDebug = ttsDebug;
+            (post as any)._mediaIsPending = true;
             generatedPosts.push(post);
         }
       } catch (loopErr: any) {

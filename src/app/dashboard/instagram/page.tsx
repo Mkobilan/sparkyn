@@ -66,11 +66,7 @@ export default function InstagramDashboard() {
       }
       const data = await response.json()
       if (data.success) {
-        if (publishNow) {
-          alert('Reel published to Instagram! (Speed Mode enabled)')
-        } else {
-          alert('Reel scheduled! Media will be generated automatically in the background.')
-        }
+        alert('Content accepted! Our AI is generating your Reel in the background. It will be live in 1-2 minutes.')
         fetchAccounts()
       } else {
         setErrorModal(`Failed: ${data.error || 'Unknown error'}`)
