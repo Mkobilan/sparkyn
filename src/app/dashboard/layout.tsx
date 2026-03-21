@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter, usePathname } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { Loader2 } from 'lucide-react'
+import PricingModal from '@/components/PricingModal'
 
 export default function DashboardLayout({
   children,
@@ -33,26 +34,13 @@ export default function DashboardLayout({
         .single()
 
       setProfile(profile)
-
-      // PROTECTION LOGIC:
-      // We check both the DB Profile AND the Auth User Metadata (as a fallback/immediate source)
-      const currentTier = profile?.subscription_tier || 'free'
-      const activePendingTier = profile?.pending_tier || user.user_metadata?.tier
-
-      if (currentTier === 'free' && activePendingTier && activePendingTier !== 'free') {
-        // Redirection logic: Force checkout if they have a pending tier but haven't paid
-        if (pathname !== '/dashboard/settings') {
-           console.log(`[Payment Gate] Redirecting to checkout for tier: ${activePendingTier}`)
-           router.replace(`/api/checkout?tier=${activePendingTier}`)
-           return
-        }
-      }
-
       setLoading(false)
     }
 
     checkAuthAndSubscription()
   }, [supabase, router, pathname])
+
+  const isUnpaid = profile?.subscription_tier === 'free'
 
   if (loading) {
     return (
@@ -63,7 +51,9 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background relative">
+      {isUnpaid && <PricingModal />}
+      
       <Sidebar />
       <div className="flex-1">
         <Suspense fallback={
