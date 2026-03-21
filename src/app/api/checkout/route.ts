@@ -39,6 +39,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(session.url!);
   } catch (error: any) {
     console.error('Stripe Checkout Error:', error);
-    return NextResponse.redirect(`${origin}/dashboard?error=checkout-failed`);
+    const message = encodeURIComponent(error.message || 'Unknown checkout error');
+    return NextResponse.redirect(`${origin}/dashboard?error=checkout-failed&message=${message}`);
   }
 }

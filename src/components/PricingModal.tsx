@@ -1,11 +1,19 @@
 'use client'
 
 import { PRICING_TIERS } from '@/lib/pricing'
-import { Check, Zap, Sparkles, Building, ChevronRight, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { Check, Zap, Sparkles, Building, ChevronRight, Loader2, AlertTriangle } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 export default function PricingModal() {
   const [loadingTier, setLoadingTier] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Check for error messages in the URL (from checkout failure)
+    const params = new URLSearchParams(window.location.search)
+    const msg = params.get('message')
+    if (msg) setError(decodeURIComponent(msg))
+  }, [])
 
   const handleSubscribe = (tierId: string) => {
     setLoadingTier(tierId)
@@ -56,7 +64,37 @@ export default function PricingModal() {
         flexDirection: 'column',
         gap: '3rem'
       }}>
-        {/* Header section */}
+        {/* Error Alert */}
+        {error && (
+          <div style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            borderRadius: '1rem',
+            padding: '1.25rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            color: '#ef4444',
+            fontSize: '0.9rem',
+            fontWeight: 600,
+            animation: 'fade-in 0.3s ease'
+          }}>
+            <AlertTriangle size={20} />
+            <div style={{ flex: 1 }}>
+              <p style={{ fontWeight: 800, marginBottom: '2px' }}>Checkout Failed</p>
+              <p style={{ opacity: 0.8, fontSize: '0.8rem' }}>{error}</p>
+            </div>
+            <button 
+              onClick={() => setError(null)}
+              style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.5 }}
+            >
+              &times;
+            </button>
+          </div>
+        )}
+
+        {/* Header section section */}
         <div style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
           <div className="badge shimmer-border" style={{ 
             color: 'white', 
