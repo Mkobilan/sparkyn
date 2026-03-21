@@ -42,59 +42,63 @@ export async function POST(request: Request) {
     // ── STEP: TTS AUDIO GENERATION ──
     console.log(`[Waterfall-Audio] Generating audio for post ${postId}`);
     
-    // We'll use a temporary file to store audio before uploading to Supabase
-    const tmpDir = os.tmpdir();
-    const jobId = Math.random().toString(36).substring(7);
-    const audioPath = path.join(tmpDir, `final_aud_${jobId}.mp3`);
-
-    // Refactor: We need a way to just get the audio instead of full compilation.
-    // For now, I'll borrow the TTS logic from VideoService.
-    // Better: I'll create a standalone TTS service in services/ai.ts or similar.
-    
-    // Implementation: Since I can't easily refactor services right now, I'll use a hack:
-    // I'll call a special "pre-process" method in VideoService or just re-implement here.
-    // Let's re-implement the TTS part specifically for this route.
-
+    // Clean script for TTS
     const safeScript = videoScript.script
-        .replace(/[^\x20-\x7E]/g, "")
+        .replace(/[^\x20-\x7E]/g, "") // Remove non-ASCII
         .replace(/\s+/g, " ")
         .trim()
-        .slice(0, 200) || "Enjoy the video.";
+        .slice(0, 250);
 
-    // Simple ElevenLabs Fetch
     let audioBuffer: Buffer | null = null;
     const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
 
     if (elevenLabsKey) {
         try {
+            console.log(`[Waterfall-Audio] Attempting ElevenLabs...`);
             const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgH9P3Od9pJC`, {
                 method: 'POST',
                 headers: { 'xi-api-key': elevenLabsKey, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     text: safeScript, 
-                    model_id: "eleven_monolingual_v1",
-                    voice_settings: { stability: 0.5, similarity_boost: 0.5 }
+                    model_id: "eleven_multilingual_v2", // Better quality
+                    voice_settings: { stability: 0.5, similarity_boost: 0.75 }
                 })
             });
-            if (res.ok) audioBuffer = Buffer.from(await res.arrayBuffer());
+            if (res.ok) {
+                audioBuffer = Buffer.from(await res.arrayBuffer());
+                console.log(`[Waterfall-Audio] ElevenLabs Success: ${audioBuffer.length} bytes`);
+            } else {
+                console.warn(`[Waterfall-Audio] ElevenLabs API error: ${res.status}`);
+            }
         } catch (e) {
-            console.warn("[AudioRoute] ElevenLabs Failed:", e);
+            console.warn("[Waterfall-Audio] ElevenLabs Exception:", e);
         }
     }
 
     // Fallback to Google TTS if ElevenLabs fails
-    if (!audioBuffer) {
-        const googleTTS = await import('google-tts-api');
-        const audioChunks = await googleTTS.getAllAudioBase64(safeScript.slice(0, 100), {
-            lang: 'en',
-            slow: false,
-            host: 'https://translate.google.com',
-        });
-        const validChunks = audioChunks.filter(c => c && c.base64 && c.base64.length > 10);
-        audioBuffer = Buffer.concat(validChunks.map(c => Buffer.from(c.base64, 'base64')));
+    if (!audioBuffer || audioBuffer.length < 100) {
+        try {
+            console.log(`[Waterfall-Audio] Falling back to Google TTS...`);
+            const googleTTS = await import('google-tts-api');
+            const ttsText = safeScript.length > 200 ? safeScript.slice(0, 200) : safeScript;
+            const audioChunks = await googleTTS.getAllAudioBase64(ttsText, {
+                lang: 'en',
+                slow: false,
+                host: 'https://translate.google.com',
+            });
+            const validChunks = audioChunks.filter(c => c && c.base64 && c.base64.length > 10);
+            if (validChunks.length > 0) {
+                audioBuffer = Buffer.concat(validChunks.map(c => Buffer.from(c.base64, 'base64')));
+                console.log(`[Waterfall-Audio] Google TTS Success: ${audioBuffer.length} bytes`);
+            }
+        } catch (e) {
+            console.error("[Waterfall-Audio] Google TTS Exception:", e);
+        }
     }
 
-    if (!audioBuffer || audioBuffer.length < 500) throw new Error("Audio generation failed (empty buffer)");
+    if (!audioBuffer || audioBuffer.length < 500) {
+        throw new Error("Audio generation failed: All TTS providers failed or returned empty data.");
+    }
 
     // Upload to Supabase Storage
     const filename = `audio_${user.id}_${Date.now()}.mp3`;

@@ -224,24 +224,29 @@ export class VideoService {
                 const imgPath = path.join(tmpDir, `img_${jobId}_${i}.${ext}`);
                 await fs.writeFile(imgPath, imageBuffer);
                 imgPaths.push(imgPath);
+                console.log(`[VideoService] Wrote image ${i} to ${imgPath} (${imageBuffer.length} bytes)`);
             }
+
+            // Validate audio
+            const audioStats = await fs.stat(audioPath).catch(() => ({ size: 0 }));
+            console.log(`[VideoService] Audio asset size: ${audioStats.size} bytes`);
+            if (audioStats.size < 500) throw new Error(`Audio asset is corrupt or too small: ${audioStats.size} bytes`);
 
             console.log(`Rendering ${numImages} images into 15s video...`);
             
             // 3. FFmpeg Render — dynamic filter complex
+            // We use -loop 1 on inputs to make them infinite streams, then cut with concat/duration
             const audioInputIndex = numImages;
-            
-            // Each image loops for enough frames to fill its share of 15 seconds
-            const framesPerImage = Math.ceil(15 / numImages * 30); // at 30fps
             const videoFilters = imagesBase64.map((_, i) => 
-                `[${i}:v]format=pix_fmts=yuv420p,setsar=1,scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,loop=loop=${framesPerImage}:size=1:start=0[v${i}]`
+                `[${i}:v]format=yuv420p,scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,setsar=1[v${i}]`
             );
             videoFilters.push(`${imagesBase64.map((_, i) => `[v${i}]`).join('')}concat=n=${numImages}:v=1:a=0[outv]`);
 
             await new Promise<void>((resolve, reject) => {
                 const ff = ffmpeg();
                 for (let i = 0; i < numImages; i++) {
-                    ff.input(imgPaths[i]);
+                    // Critical: -loop 1 for images to make them "video streams"
+                    ff.input(imgPaths[i]).inputOptions('-loop', '1');
                 }
                 ff.input(audioPath);
                 
@@ -251,25 +256,20 @@ export class VideoService {
                     '-map', `${audioInputIndex}:a`,
                     '-c:v', 'libx264',
                     '-preset', 'ultrafast',
-                    '-profile:v', 'high',
-                    '-level', '4.1',
-                    '-crf', '23',            // Slightly lower quality = smaller file = faster
+                    '-tune', numImages === 1 ? 'stillimage' : 'grain',
+                    '-crf', '28',            // Even smaller for speed
                     '-pix_fmt', 'yuv420p',
                     '-r', '30',
-                    '-g', '60',
-                    '-c:a', 'aac',
-                    '-b:a', '128k',
-                    '-ar', '44100',
-                    '-ac', '2',
                     '-movflags', '+faststart',
                     '-shortest',
-                    '-t', '15',              // 15-second Short
+                    '-t', '15',
                 ])
                 .save(outputPath)
+                .on('start', (cmd) => console.log('[FFmpeg] Spawned:', cmd))
                 .on('end', () => resolve())
                 .on('error', (err) => {
                     console.error('FFmpeg render failed:', err);
-                    reject(new Error(`FFmpeg error: ${err.message}`));
+                    reject(new Error(`FFmpeg assets error: ${err.message}`));
                 });
             });
 
