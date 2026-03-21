@@ -122,16 +122,25 @@ export class VideoService {
             
             // 2. Save Images to disk
             const numImages = imagesBase64.length;
+            const imgPaths: string[] = [];
             for (let i = 0; i < numImages; i++) {
                 let imageBuffer: Buffer;
-                if (imagesBase64[i].startsWith('http')) {
+                let ext = 'jpg';
+                if (imagesBase64[i].startsWith('data:')) {
+                    const mime = imagesBase64[i].match(/data:(.*);base64/)?.[1];
+                    if (mime === 'image/png') ext = 'png';
+                    const base64Data = imagesBase64[i].split(',')[1];
+                    imageBuffer = Buffer.from(base64Data, 'base64');
+                } else if (imagesBase64[i].startsWith('http')) {
                     const res = await fetch(imagesBase64[i]);
                     imageBuffer = Buffer.from(await res.arrayBuffer());
+                    if (res.headers.get('content-type')?.includes('png')) ext = 'png';
                 } else {
-                    const base64Data = imagesBase64[i].includes(',') ? imagesBase64[i].split(',')[1] : imagesBase64[i];
-                    imageBuffer = Buffer.from(base64Data, 'base64');
+                    imageBuffer = Buffer.from(imagesBase64[i], 'base64');
                 }
-                await fs.writeFile(path.join(tmpDir, `img_${jobId}_${i}.jpg`), imageBuffer);
+                const imgPath = path.join(tmpDir, `img_${jobId}_${i}.${ext}`);
+                await fs.writeFile(imgPath, imageBuffer);
+                imgPaths.push(imgPath);
             }
 
             console.log(`Rendering ${numImages} images into 15s video...`);
@@ -149,7 +158,7 @@ export class VideoService {
             await new Promise<void>((resolve, reject) => {
                 const ff = ffmpeg();
                 for (let i = 0; i < numImages; i++) {
-                    ff.input(path.join(tmpDir, `img_${jobId}_${i}.jpg`));
+                    ff.input(imgPaths[i]);
                 }
                 ff.input(audioPath);
                 
@@ -194,7 +203,7 @@ export class VideoService {
             await Promise.all([
                 fs.unlink(audioPath).catch(() => {}),
                 fs.unlink(outputPath).catch(() => {}),
-                ...imagesBase64.map((_, i) => fs.unlink(path.join(tmpDir, `img_${jobId}_${i}.jpg`)).catch(() => {}))
+                ...imgPaths.map(p => fs.unlink(p).catch(() => {}))
             ]);
 
             return {

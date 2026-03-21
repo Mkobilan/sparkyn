@@ -249,17 +249,23 @@ export const aiService = {
             console.error("Cloudflare AI Errors:", json.errors);
             throw new Error(`Cloudflare AI Block: ${json.errors[0]?.message || 'Unknown error'}`);
           }
+          return `data:image/jpeg;base64,${base64Image}`;
       } else {
           const arrayBuffer = await response.arrayBuffer();
+          // Detect if it is PNG or JPEG using magic bytes
+          const isPng = arrayBuffer.byteLength > 8 && 
+            new Uint8Array(arrayBuffer.slice(0, 8)).every((byte, i) => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A][i] === byte);
+          const mimeType = isPng ? 'image/png' : 'image/jpeg';
+          
           base64Image = Buffer.from(arrayBuffer).toString('base64');
-          console.log(`Cloudflare Binary response detected. Size: ${base64Image.length}`);
+          console.log(`Cloudflare Binary response (${mimeType}). Size: ${base64Image.length}`);
+          
+          if (!base64Image || base64Image.length < 100) {
+            throw new Error("Cloudflare returned an empty or corrupt image buffer.");
+          }
+          
+          return `data:${mimeType};base64,${base64Image}`;
       }
-      
-      if (!base64Image || base64Image.length < 100) {
-        throw new Error("Cloudflare returned an empty or corrupt image buffer.");
-      }
-      
-      return `data:image/jpeg;base64,${base64Image}`;
       
     } catch (error: any) {
       console.error("Cloudflare FLUX Image generation failed:", error.message);

@@ -83,7 +83,7 @@ export async function POST(request: Request) {
 
       try {
         const imageContext = `${account.metadata?.industry || profile.industry} business - ${account.metadata?.description || profile.business_description}`;
-        const isVideoRequest = account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' || isVideo;
+        let isVideoRequest = account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' || isVideo;
 
         // ── STEP 1: AI CONTENT & SCRIPT GENERATION (parallel) ──
         console.log(`[Generate] Step 1: AI content generation for ${account.platform}`);
@@ -114,17 +114,25 @@ export async function POST(request: Request) {
         let ttsStatus = 'n/a';
 
         if (isVideoRequest && videoScript) {
-          // Generate 1 image for the video (keep it fast)
-          const imageBase64 = await aiService.generateImage(
-            `Context: ${imageContext}. Subject: ${videoScript.imagePrompts[0]}`,
-            content.caption, 512, 896
-          );
-          // Compile video with FFmpeg
-          const { videoService } = await import('../../../services/video');
-          const videoResult = await videoService.compileShortVideo([imageBase64], videoScript.script);
-          mediaDataUri = videoResult.videoDataUri;
-          ttsStatus = videoResult.ttsStatus;
-          console.log(`[Generate] Video compiled. TTS: ${ttsStatus}`);
+          try {
+            console.log(`[Generate] Attempting video compilation for ${account.platform}...`);
+            // Generate 1 image for the video (keep it fast)
+            const imageBase64 = await aiService.generateImage(
+              `Context: ${imageContext}. Subject: ${videoScript.imagePrompts[0]}`,
+              content.caption, 512, 896
+            );
+            // Compile video with FFmpeg
+            const { videoService } = await import('../../../services/video');
+            const videoResult = await videoService.compileShortVideo([imageBase64], videoScript.script);
+            mediaDataUri = videoResult.videoDataUri;
+            ttsStatus = videoResult.ttsStatus;
+            console.log(`[Generate] Video compiled successfully. TTS: ${ttsStatus}`);
+          } catch (vidErr: any) {
+            console.error(`[Generate] Video compilation FAILED for ${account.platform}. Falling back to IMAGE.`, vidErr.message);
+            // FALLBACK: Generate a high-res image instead of failing
+            isVideoRequest = false; 
+            mediaDataUri = await aiService.generateImage(imageContext, content.caption, 1024, 1024);
+          }
         } else {
           // Generate a single image
           mediaDataUri = await aiService.generateImage(imageContext, content.caption, 1024, 1024);
@@ -147,7 +155,9 @@ export async function POST(request: Request) {
           contentType = res.headers.get('content-type') || 'image/jpeg';
         }
 
-        const ext = contentType.includes('video') ? 'mp4' : 'jpg';
+        let ext = 'jpg';
+        if (contentType.includes('video')) ext = 'mp4';
+        else if (contentType.includes('png')) ext = 'png';
         const filename = `media_${user.id}_${Date.now()}.${ext}`;
         
         const { error: uploadErr } = await supabaseAdmin.storage
