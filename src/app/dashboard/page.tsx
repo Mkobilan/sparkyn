@@ -157,11 +157,15 @@ export default function DashboardPage() {
                   <CheckCircle2 className="w-10 h-10" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-2xl font-black font-heading">Content Priming...</h3>
+                  <h3 className="text-2xl font-black font-heading">
+                    {lastResults?.posts?.[0]?.status === 'published' ? '✅ Published!' : lastResults?.posts?.[0]?.status === 'failed' ? '❌ Publishing Failed' : 'Content Created'}
+                  </h3>
                   <p className="text-muted-foreground font-medium text-sm">
                     {lastResults?.posts?.[0]?.status === 'published' 
                       ? 'Your post is LIVE!' 
-                      : 'AI is generating your media in the background. Your post will be live in 1-2 minutes.'}
+                      : lastResults?.posts?.[0]?.status === 'failed'
+                        ? `Error: ${lastResults?.errors?.[0] || 'Unknown error. Check Vercel logs for details.'}`
+                        : 'Content has been generated and scheduled.'}
                   </p>
                 </div>
               </div>

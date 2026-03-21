@@ -59,15 +59,25 @@ export default function YoutubeDashboard() {
         const isTimeout = response.status === 504 || response.status === 408;
         alert(isTimeout 
           ? 'The request timed out. Video generation takes time — try again or schedule it instead.' 
-          : `Server error (${response.status}): ${errorText.slice(0, 200)}`);
+          : `Server error (${response.status}): ${errorText.slice(0, 300)}`);
         return;
       }
       const data = await response.json()
       if (data.success) {
-        alert('Content accepted! Our AI is generating your short in the background. It will be live in 1-2 minutes.')
+        const published = data.summary?.published || 0;
+        const scheduled = data.summary?.scheduled || 0;
+        if (published > 0) {
+          const linkInfo = data.publishLinks?.length > 0 ? `\n\nView it: ${data.publishLinks[0].url}` : '';
+          alert(`✅ YouTube Short published successfully!${linkInfo}`)
+        } else if (scheduled > 0) {
+          alert(`📅 Short generated and scheduled! It will be posted at the scheduled time.`)
+        } else {
+          alert('Content created and saved.')
+        }
         fetchChannels()
       } else {
-        alert(`Failed: ${data.error || 'Unknown error'}`)
+        const errorDetail = data.errors?.join('\n') || data.error || 'Unknown error';
+        alert(`Publishing failed:\n\n${errorDetail}`)
       }
     } catch (error: any) {
       console.error(error)

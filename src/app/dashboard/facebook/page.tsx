@@ -74,22 +74,30 @@ export default function FacebookDashboard() {
         const isTimeout = response.status === 504 || response.status === 408;
         setErrorModal(isTimeout 
           ? 'The request timed out. Video generation takes time — try again or schedule it instead.' 
-          : `Server error (${response.status}): ${errorText.slice(0, 200)}`);
+          : `Server error (${response.status}): ${errorText.slice(0, 300)}`);
         return;
       }
       const data = await response.json()
       if (data.success) {
-        alert('Content accepted! Our AI is generating your media in the background. Your post will be live in 1-2 minutes.')
+        const published = data.summary?.published || 0;
+        const scheduled = data.summary?.scheduled || 0;
+        if (published > 0) {
+          const linkInfo = data.publishLinks?.length > 0 ? `\n\nView it: ${data.publishLinks[0].url}` : '';
+          alert(`✅ Published successfully to your page!${linkInfo}`)
+        } else if (scheduled > 0) {
+          alert(`📅 Content generated and scheduled! It will be posted at the scheduled time.`)
+        } else {
+          alert('Content created and saved.')
+        }
         fetchPages()
       } else {
-        setErrorModal(`Failed: ${data.error || 'Unknown error'}`)
+        const errorDetail = data.errors?.join('\n') || data.error || 'Unknown error';
+        setErrorModal(`Publishing failed:\n\n${errorDetail}`)
       }
     } catch (error: any) {
       console.error("Dashboard handleGenerate Error:", error)
       const msg = error.message || "Unknown Network Exception"
       setErrorModal(`Network error: ${msg}`)
-      // High-visibility fallback for production debugging
-      if (typeof window !== 'undefined') window.alert(`CRITICAL ERROR: ${msg}`)
     } finally {
       setGeneratingId(null)
     }

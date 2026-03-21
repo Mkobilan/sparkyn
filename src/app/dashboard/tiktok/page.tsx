@@ -66,10 +66,19 @@ export default function TikTokDashboard() {
       }
       const data = await response.json()
       if (data.success) {
-        alert('Content accepted! Our AI is generating your TikTok in the background. It will be live in 1-2 minutes.')
+        const published = data.summary?.published || 0;
+        const scheduled = data.summary?.scheduled || 0;
+        if (published > 0) {
+          alert(`✅ TikTok published successfully!`)
+        } else if (scheduled > 0) {
+          alert(`📅 Content generated and scheduled!`)
+        } else {
+          alert('Content created and saved.')
+        }
         fetchAccounts()
       } else {
-        setErrorModal(`Failed: ${data.error || 'Unknown error'}`)
+        const errorDetail = data.errors?.join('\n') || data.error || 'Unknown error';
+        setErrorModal(`Publishing failed:\n\n${errorDetail}`)
       }
     } catch (error: any) {
       console.error(error)
