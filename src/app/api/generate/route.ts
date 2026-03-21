@@ -79,58 +79,57 @@ export async function POST(request: Request) {
         const imageContext = `${account.metadata?.industry || profile.industry} business - ${account.metadata?.description || profile.business_description}`;
         let mediaUrl = '';
         let rawBase64ForMeta: string | undefined = undefined;
-
         let ttsDebug = '';
-        try {
-            if (account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' || isVideo) {
-                 const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, content.caption);
-                 // Optimize: 2 images at smaller resolution for faster generation within 60s limit
-                 const prompts = imagePrompts.slice(0, 2);
-                 const imagePromises = prompts.map(prompt => aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption, 512, 896));
-                 const imagesBase64 = await Promise.all(imagePromises);
-                 const { videoService } = await import('@/services/video');
-                 const result = await videoService.compileShortVideo(imagesBase64, script);
-                 mediaUrl = result.videoDataUri;
-                 ttsDebug = result.ttsStatus;
-            } else {
-                 mediaUrl = await aiService.generateImage(imageContext, content.caption, 1024, 1024);
-            }
 
-            // 3. STORAGE SYNC
-            // For video + direct publish: skip Supabase to save ~10s (pass data URI directly)
-            const isVideoContent = mediaUrl.startsWith('data:video');
-            const skipStorageForDirectPublish = isVideoContent && publishNow;
-
-            if (!skipStorageForDirectPublish && (mediaUrl.startsWith('data:') || (mediaUrl.startsWith('http') && !mediaUrl.includes('supabase.co')))) {
-                let bytes: Buffer;
-                let contentType: string;
-
-                if (mediaUrl.startsWith('data:')) {
-                    contentType = mediaUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
-                    const base64Data = mediaUrl.split(',')[1];
-                    rawBase64ForMeta = base64Data;
-                    bytes = Buffer.from(base64Data, 'base64');
+        // Optimization for Vercel Hobby: Only generate media synchronously if "Publish Now" is true.
+        // Otherwise, just save the AI content and let the user see it in the queue.
+        if (publishNow) {
+            try {
+                if (account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' || isVideo) {
+                     const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, content.caption);
+                     // Speed Mode: 1 image @ 512x896 = ~5s generation
+                     const prompt = imagePrompts[0];
+                     const imageBase64 = await aiService.generateImage(`Context: ${imageContext}. Subject: ${prompt}`, content.caption, 512, 896);
+                     const { videoService } = await import('@/services/video');
+                     const result = await videoService.compileShortVideo([imageBase64], script);
+                     mediaUrl = result.videoDataUri;
+                     ttsDebug = result.ttsStatus;
                 } else {
-                    const mediaRes = await fetch(mediaUrl);
-                    if (!mediaRes.ok) throw new Error(`External status ${mediaRes.status}`);
-                    const ab = await mediaRes.arrayBuffer();
-                    bytes = Buffer.from(ab);
-                    contentType = mediaRes.headers.get('content-type') || 'image/jpeg';
-                    if (contentType.includes('json') || bytes.length < 1000) throw new Error("Invalid external data");
+                     mediaUrl = await aiService.generateImage(imageContext, content.caption, 1024, 1024);
                 }
 
-                const ext = contentType.includes('video') ? 'mp4' : (contentType.includes('png') ? 'png' : 'jpg');
-                const filename = `${Math.random().toString(36).substring(7)}_${Date.now()}.${ext}`;
-                const { error: upErr } = await supabase.storage.from('generated-images').upload(filename, bytes, { contentType: contentType });
-                if (upErr) throw upErr;
+                // 3. STORAGE SYNC
+                const isVideoContent = mediaUrl.startsWith('data:video');
+                const skipStorageForDirectPublish = isVideoContent && publishNow;
 
-                mediaUrl = supabase.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
-                await new Promise(r => setTimeout(r, 1500)); // Propagate
+                if (!skipStorageForDirectPublish && (mediaUrl.startsWith('data:') || (mediaUrl.startsWith('http') && !mediaUrl.includes('supabase.co')))) {
+                    let bytes: Buffer;
+                    let contentType: string;
+
+                    if (mediaUrl.startsWith('data:')) {
+                        contentType = mediaUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
+                        const base64Data = mediaUrl.split(',')[1];
+                        rawBase64ForMeta = base64Data;
+                        bytes = Buffer.from(base64Data, 'base64');
+                    } else {
+                        const mediaRes = await fetch(mediaUrl);
+                        if (!mediaRes.ok) throw new Error(`External status ${mediaRes.status}`);
+                        const ab = await mediaRes.arrayBuffer();
+                        bytes = Buffer.from(ab);
+                        contentType = mediaRes.headers.get('content-type') || 'image/jpeg';
+                    }
+
+                    const ext = contentType.includes('video') ? 'mp4' : (contentType.includes('png') ? 'png' : 'jpg');
+                    const filename = `${Math.random().toString(36).substring(7)}_${Date.now()}.${ext}`;
+                    const { error: upErr } = await supabase.storage.from('generated-images').upload(filename, bytes, { contentType: contentType });
+                    if (upErr) throw upErr;
+
+                    mediaUrl = supabase.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
+                }
+            } catch (mediaErr: any) {
+                console.error("AI Media failed, using Emergency Stock Fallback:", mediaErr.message || mediaErr);
+                mediaUrl = "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=1080&auto=format&fit=crop";
             }
-        } catch (mediaErr: any) {
-            console.error("AI Media failed, using Emergency Stock Fallback:", mediaErr.message || mediaErr);
-            // GUARANTEED SUCCESS: Pivot to a high-quality lifestyle stock photo
-            mediaUrl = "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=1080&auto=format&fit=crop";
         }
 
         // 4. PUBLISHING

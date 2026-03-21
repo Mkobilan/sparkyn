@@ -66,7 +66,11 @@ export default function InstagramDashboard() {
       }
       const data = await response.json()
       if (data.success) {
-        alert(publishNow ? 'Content published to Instagram!' : 'Content generated and added to queue!')
+        if (publishNow) {
+          alert('Reel published to Instagram! (Speed Mode enabled)')
+        } else {
+          alert('Reel scheduled! Media will be generated automatically in the background.')
+        }
         fetchAccounts()
       } else {
         setErrorModal(`Failed: ${data.error || 'Unknown error'}`)

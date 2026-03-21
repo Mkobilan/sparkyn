@@ -79,7 +79,11 @@ export default function FacebookDashboard() {
       }
       const data = await response.json()
       if (data.success) {
-        alert(publishNow ? 'Content published to Facebook!' : 'Content generated and added to queue!')
+        if (publishNow) {
+          alert('Content published! (Speed Mode enabled for Hobby plan)')
+        } else {
+          alert('Content scheduled! Media will be generated automatically in the background.')
+        }
         fetchPages()
       } else {
         setErrorModal(`Failed: ${data.error || 'Unknown error'}`)

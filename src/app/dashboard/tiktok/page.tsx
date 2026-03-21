@@ -66,7 +66,11 @@ export default function TikTokDashboard() {
       }
       const data = await response.json()
       if (data.success) {
-        alert(publishNow ? 'Content published to TikTok!' : 'Content generated and added to queue!')
+        if (publishNow) {
+          alert('Video published to TikTok! (Speed Mode enabled)')
+        } else {
+          alert('Video scheduled! Media will be generated automatically in the background.')
+        }
         fetchAccounts()
       } else {
         setErrorModal(`Failed: ${data.error || 'Unknown error'}`)

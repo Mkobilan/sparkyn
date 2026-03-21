@@ -29,44 +29,44 @@ export default function DashboardPage() {
   const [lastResults, setLastResults] = useState<any>(null)
   const supabase = createClient()
 
+  const fetchDashboardData = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    // Fetch profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    
+    setProfile(profileData)
+
+    // Fetch real queue data
+    const { data: queueData } = await supabase
+      .from('scheduled_posts')
+      .select('*')
+      .eq('status', 'scheduled')
+      .order('scheduled_at', { ascending: true })
+      .limit(3)
+    
+    setQueue(queueData || [])
+
+    // Fetch real recent activity (published or failed posts)
+    const { data: activityData } = await supabase
+      .from('scheduled_posts')
+      .select('*')
+      .neq('status', 'scheduled')
+      .order('updated_at', { ascending: false })
+      .limit(4)
+    
+    setRecentActivity(activityData || [])
+    setLoading(false)
+  }
+
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      
-      setProfile(profileData)
-
-      // Fetch real queue data
-      const { data: queueData } = await supabase
-        .from('scheduled_posts')
-        .select('*')
-        .eq('status', 'scheduled')
-        .order('scheduled_at', { ascending: true })
-        .limit(3)
-      
-      setQueue(queueData || [])
-
-      // Fetch real recent activity (published or failed posts)
-      const { data: activityData } = await supabase
-        .from('scheduled_posts')
-        .select('*')
-        .neq('status', 'scheduled')
-        .order('updated_at', { ascending: false })
-        .limit(4)
-      
-      setRecentActivity(activityData || [])
-      setLoading(false)
-    }
-
-    fetchData()
-  }, [supabase])
+    fetchDashboardData()
+  }, [])
 
   const handleGenerate = async () => {
     setIsGenerating(true)
@@ -74,7 +74,7 @@ export default function DashboardPage() {
       const response = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ publishNow: true })
+        body: JSON.stringify({ publishNow: true }) 
       })
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown server error');
@@ -86,15 +86,8 @@ export default function DashboardPage() {
       }
       const data = await response.json()
       if (data.success) {
-        setLastResults(data);
-        // Refresh data
-        const { data: queueData } = await supabase
-          .from('scheduled_posts')
-          .select('*')
-          .eq('status', 'scheduled')
-          .order('scheduled_at', { ascending: true })
-          .limit(3)
-        setQueue(queueData || [])
+        alert('Post published! (Speed Mode enabled)')
+        fetchDashboardData()
       } else {
         alert("Generation failed: " + data.error);
       }
