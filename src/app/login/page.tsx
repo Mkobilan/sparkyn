@@ -38,10 +38,10 @@ export default function LoginPage() {
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '1rem' }} className="bg-gradient">
       <div className="card" style={{ maxWidth: 440, width: '100%', padding: '2.5rem 2rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ width: 48, height: 48, borderRadius: '0.75rem', background: 'hsla(36,95%,55%,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-            <Sparkles style={{ width: 24, height: 24, color: 'hsl(36,95%,55%)' }} />
+          <div style={{ width: 56, height: 56, borderRadius: '1rem', background: 'hsla(36,95%,55%,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', border: '1px solid hsla(36,95%,55%,0.2)' }} className="glow-amber">
+            <img src="/sparkyn_icon.jpg" alt="Sparkyn" style={{ width: 40, height: 40, borderRadius: '0.5rem' }} />
           </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.35rem' }}>Welcome back</h1>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.35rem', fontFamily: "'Space Grotesk', sans-serif" }}>Welcome back</h1>
           <p style={{ color: 'hsl(0,0%,50%)', fontSize: '0.9rem' }}>Sign in to automate your growth.</p>
         </div>
 
