@@ -22,6 +22,8 @@ export default function YoutubeDashboard() {
   const [channels, setChannels] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [progressMsg, setProgressMsg] = useState<string | null>(null)
+  const [errorModal, setErrorModal] = useState<string | null>(null)
   const [scheduledTimes, setScheduledTimes] = useState<Record<string, string>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ business_name: '', industry: '', niche: '', description: '', goal: '' })
@@ -47,43 +49,55 @@ export default function YoutubeDashboard() {
 
   const handleGenerate = async (accountId: string, publishNow: boolean = false) => {
     setGeneratingId(accountId)
+    setProgressMsg("Step 1/3: Writing AI Script...")
     try {
       const scheduledAt = scheduledTimes[accountId]
-      const response = await fetch('/api/generate', { 
+      
+      // ── WATERFALL STEP 1: GENERATE CONTENT ──
+      const genRes = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, publishNow, scheduledAt })
+        body: JSON.stringify({ accountId, scheduledAt, isVideo: true })
       })
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown server error');
-        const isTimeout = response.status === 504 || response.status === 408;
-        alert(isTimeout 
-          ? 'The request timed out. Video generation takes time — try again or schedule it instead.' 
-          : `Server error (${response.status}): ${errorText.slice(0, 300)}`);
-        return;
-      }
-      const data = await response.json()
-      if (data.success) {
-        const published = data.summary?.published || 0;
-        const scheduled = data.summary?.scheduled || 0;
-        if (published > 0) {
-          const linkInfo = data.publishLinks?.length > 0 ? `\n\nView it: ${data.publishLinks[0].url}` : '';
-          alert(`✅ YouTube Short published successfully!${linkInfo}`)
-        } else if (scheduled > 0) {
-          alert(`📅 Short generated and scheduled! It will be posted at the scheduled time.`)
-        } else {
-          alert('Content created and saved.')
-        }
-        fetchChannels()
+      if (!genRes.ok) throw new Error(`[Script Gen] ${await genRes.text()}`);
+      const genData = await genRes.json();
+      const postId = genData.posts?.[0]?.id;
+      if (!postId) throw new Error("No Post ID returned from generation.");
+
+      // ── WATERFALL STEP 2: GENERATE MEDIA (VIDEO) ──
+      setProgressMsg("Step 2/3: Compiling AI Video (this takes 30s)...")
+      const mediaRes = await fetch('/api/generate/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId })
+      })
+      if (!mediaRes.ok) throw new Error(`[Media Gen] ${await mediaRes.text()}`);
+      
+      // ── WATERFALL STEP 3: PUBLISH NOW (IF REQUESTED) ──
+      if (publishNow) {
+        setProgressMsg("Step 3/3: Publishing Short to YouTube...")
+        const pubRes = await fetch('/api/publish/now', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId })
+        })
+        if (!pubRes.ok) throw new Error(`[Publish] ${await pubRes.text()}`);
+        const pubData = await pubRes.json();
+        alert(`✅ YouTube Short published! View it: ${pubData.url}`)
       } else {
-        const errorDetail = data.errors?.join('\n') || data.error || 'Unknown error';
-        alert(`Publishing failed:\n\n${errorDetail}`)
+        alert(`📅 Short generated and scheduled!`)
       }
+
+      fetchChannels()
     } catch (error: any) {
-      console.error(error)
-      alert(`Network error: ${error.message}`)
+      console.error("YouTube Waterfall Error:", error)
+      const isTimeout = error.message?.includes('504') || error.message?.includes('timeout');
+      setErrorModal(isTimeout 
+        ? 'The request timed out. This step took too long—please try again.'
+        : `YouTube Waterfall Failure: ${error.message}`);
     } finally {
       setGeneratingId(null)
+      setProgressMsg(null)
     }
   }
 
@@ -134,6 +148,41 @@ export default function YoutubeDashboard() {
       
   return (
     <div className="text-white relative">
+
+      {progressMsg && (
+        <div className="fixed inset-0 bg-[#000000]/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-[#0f0f0f] border border-[#FF0000]/30 p-10 rounded-[2.5rem] max-w-md w-full shadow-[0_0_80px_rgba(255,0,0,0.2)] text-center space-y-6">
+            <div className="flex justify-center">
+              <RefreshCw className="w-16 h-16 text-[#FF0000] animate-spin" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-white tracking-tight">Processing YouTube Waterfall</h3>
+              <p className="text-[#FF0000] font-bold animate-pulse">{progressMsg}</p>
+            </div>
+            <p className="text-muted-foreground text-xs px-4 leading-relaxed">
+              Splitting request into stages to prevent timeouts. Please don't close this window.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {errorModal && (
+        <div className="fixed inset-0 bg-[#000000]/95 z-[99999] flex items-center justify-center p-4">
+          <div className="bg-[#0f0f0f] border-2 border-red-500 p-8 rounded-[2.5rem] max-w-2xl w-full shadow-[0_0_100px_rgba(239,68,68,0.4)] relative animate-in fade-in zoom-in duration-300">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-extrabold text-red-500">Generation Exception</h3>
+            </div>
+            <div className="bg-red-500/10 p-5 rounded-2xl border border-red-500/20 text-red-200 text-sm max-h-[300px] overflow-y-auto font-mono mb-6">
+              {errorModal}
+            </div>
+            <div className="flex justify-end">
+              <button onClick={() => setErrorModal(null)} className="btn bg-red-500 hover:bg-red-500/90 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition-all">
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <main className="main-content flex-1 p-8 bg-gradient relative overflow-y-auto">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#FF0000]/5 rounded-full blur-[120px] pointer-events-none -z-10" />

@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [recentActivity, setRecentActivity] = useState<any[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [progressMsg, setProgressMsg] = useState<string | null>(null)
   const [lastResults, setLastResults] = useState<any>(null)
   const supabase = createClient()
 
@@ -70,32 +71,53 @@ export default function DashboardPage() {
 
   const handleGenerate = async () => {
     setIsGenerating(true)
+    setProgressMsg("Step 1/3: Writing AI Scripts for all platforms...")
     try {
-      const response = await fetch('/api/generate', { 
+      // ── WATERFALL STEP 1: GENERATE CONTENT ──
+      const genRes = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ publishNow: true }) 
       })
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown server error');
-        const isTimeout = response.status === 504 || response.status === 408;
-        alert(isTimeout 
-          ? 'The request timed out. Video generation takes time — try again or schedule it instead.' 
-          : `Server error (${response.status}): ${errorText.slice(0, 200)}`);
+      if (!genRes.ok) throw new Error(`[Script Gen] ${await genRes.text()}`);
+      const genData = await genRes.json();
+      const posts = genData.posts || [];
+      if (posts.length === 0) {
+        alert("No content was generated. Check your connected accounts.");
         return;
       }
-      const data = await response.json()
-      if (data.success) {
-        setLastResults(data);
-        fetchDashboardData()
-      } else {
-        alert("Generation failed: " + data.error);
+
+      // ── WATERFALL STEP 2: GENERATE MEDIA FOR EACH POST ──
+      for (const post of posts) {
+        setProgressMsg(`Step 2/3: Compiling Media for ${post.platform}...`)
+        const mediaRes = await fetch('/api/generate/media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: post.id })
+        });
+        if (!mediaRes.ok) console.error(`[Media Gen] Failed for ${post.id}:`, await mediaRes.text());
+        
+        // ── WATERFALL STEP 3: PUBLISH NOW ──
+        setProgressMsg(`Step 3/3: Publishing ${post.platform} live...`)
+        const pubRes = await fetch('/api/publish/now', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: post.id })
+        });
+        if (!pubRes.ok) console.error(`[Publish] Failed for ${post.id}:`, await pubRes.text());
       }
+
+      setLastResults({ success: true, posts });
+      fetchDashboardData();
     } catch (error: any) {
-      console.error(error)
-      alert("System Error: " + (error.message || "The server timed out or failed. Check your connection or upgrade Vercel limits."));
+      console.error("Main Dashboard Waterfall Error:", error)
+      const isTimeout = error.message?.includes('504') || error.message?.includes('timeout');
+      alert(isTimeout 
+        ? 'The request timed out. High traffic on AI models—please try again.'
+        : `Waterfall Failure: ${error.message}`);
     } finally {
       setIsGenerating(false)
+      setProgressMsg(null)
     }
   }
 
@@ -140,6 +162,25 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+        {progressMsg && (
+          <div className="fixed inset-0 bg-black/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-[#0f0f0f] border border-primary/30 p-10 rounded-[2.5rem] max-w-md w-full shadow-[0_0_100px_rgba(var(--primary),0.2)] text-center space-y-6 animate-in zoom-in duration-300">
+              <div className="flex justify-center">
+                <div className="relative">
+                  <RefreshCw className="w-16 h-16 text-primary animate-spin" />
+                  <Zap className="w-6 h-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-white tracking-tight">Waterfall Fire</h3>
+                <p className="text-primary font-bold animate-pulse">{progressMsg}</p>
+              </div>
+              <p className="text-muted-foreground text-xs leading-relaxed max-w-[280px] mx-auto">
+                Processing multi-stage generation to exceed platform timeout limits.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Success Modal */}
         {lastResults && (

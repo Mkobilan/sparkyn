@@ -26,8 +26,7 @@ async function handleCron(request: Request) {
     const { data: mediaPending, error: mediaErr } = await supabaseAdmin
       .from('scheduled_posts')
       .select('*, social_accounts!platform_account_id(*), profiles!user_id(*)')
-      .eq('status', 'scheduled')
-      .like('image_url', PLACEHOLDER_PREFIX)
+      .or('status.eq.content_ready,and(status.eq.scheduled,image_url.like.https://images.unsplash.com/photo-1544367567-0f2fcb009e0b%)')
       .limit(5);
 
     if (mediaErr) {

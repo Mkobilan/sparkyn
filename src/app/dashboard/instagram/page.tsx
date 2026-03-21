@@ -23,6 +23,7 @@ export default function InstagramDashboard() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [progressMsg, setProgressMsg] = useState<string | null>(null)
   const [scheduledTimes, setScheduledTimes] = useState<Record<string, string>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
   const [errorModal, setErrorModal] = useState<string | null>(null)
@@ -49,42 +50,54 @@ export default function InstagramDashboard() {
 
   const handleGenerate = async (accountId: string, publishNow: boolean = false, isVideo: boolean = false) => {
     setGeneratingId(accountId)
+    setProgressMsg("Step 1/3: Writing AI Script...")
     try {
       const scheduledAt = scheduledTimes[accountId]
-      const response = await fetch('/api/generate', { 
+      
+      // ── WATERFALL STEP 1: GENERATE CONTENT ──
+      const genRes = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, publishNow, scheduledAt, isVideo })
+        body: JSON.stringify({ accountId, scheduledAt, isVideo })
       })
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown server error');
-        const isTimeout = response.status === 504 || response.status === 408;
-        setErrorModal(isTimeout 
-          ? 'The request timed out. Video generation takes time — try again or schedule it instead.' 
-          : `Server error (${response.status}): ${errorText.slice(0, 200)}`);
-        return;
-      }
-      const data = await response.json()
-      if (data.success) {
-        const published = data.summary?.published || 0;
-        const scheduled = data.summary?.scheduled || 0;
-        if (published > 0) {
-          alert(`✅ Instagram post published successfully!`)
-        } else if (scheduled > 0) {
-          alert(`📅 Content generated and scheduled!`)
-        } else {
-          alert('Content created and saved.')
-        }
-        fetchAccounts()
+      if (!genRes.ok) throw new Error(`[Script Gen] ${await genRes.text()}`);
+      const genData = await genRes.json();
+      const postId = genData.posts?.[0]?.id;
+      if (!postId) throw new Error("No Post ID returned from generation.");
+
+      // ── WATERFALL STEP 2: GENERATE MEDIA (IMAGE/REEL) ──
+      setProgressMsg(isVideo ? "Step 2/3: Compiling AI Reel (this takes 30s)..." : "Step 2/3: Generating AI Image...")
+      const mediaRes = await fetch('/api/generate/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId })
+      })
+      if (!mediaRes.ok) throw new Error(`[Media Gen] ${await mediaRes.text()}`);
+      
+      // ── WATERFALL STEP 3: PUBLISH NOW (IF REQUESTED) ──
+      if (publishNow) {
+        setProgressMsg("Step 3/3: Posting live to Instagram...")
+        const pubRes = await fetch('/api/publish/now', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId })
+        })
+        if (!pubRes.ok) throw new Error(`[Publish] ${await pubRes.text()}`);
+        alert(`✅ Instagram post published successfully!`)
       } else {
-        const errorDetail = data.errors?.join('\n') || data.error || 'Unknown error';
-        setErrorModal(`Publishing failed:\n\n${errorDetail}`)
+        alert(`📅 Content generated and scheduled!`)
       }
+
+      fetchAccounts()
     } catch (error: any) {
-      console.error(error)
-      setErrorModal(`Network error: ${error.message}`)
+      console.error("Instagram Waterfall Error:", error)
+      const isTimeout = error.message?.includes('504') || error.message?.includes('timeout');
+      setErrorModal(isTimeout 
+        ? 'The request timed out. This step took too long—please try again.'
+        : `Instagram Waterfall Failure: ${error.message}`);
     } finally {
       setGeneratingId(null)
+      setProgressMsg(null)
     }
   }
 
@@ -135,6 +148,23 @@ export default function InstagramDashboard() {
 
   return (
     <div className="text-white relative">
+
+      {progressMsg && (
+        <div className="fixed inset-0 bg-[#000000]/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-[#0f0f0f] border border-[#ee2a7b]/30 p-10 rounded-[2.5rem] max-w-md w-full shadow-[0_0_80px_rgba(238,42,123,0.2)] text-center space-y-6">
+            <div className="flex justify-center">
+              <RefreshCw className="w-16 h-16 text-[#ee2a7b] animate-spin" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-white tracking-tight">Processing Instagram Waterfall</h3>
+              <p className="text-[#ee2a7b] font-bold animate-pulse">{progressMsg}</p>
+            </div>
+            <p className="text-muted-foreground text-xs px-4 leading-relaxed">
+              Splitting request into stages to prevent timeouts. Please don't close this window.
+            </p>
+          </div>
+        </div>
+      )}
 
       {errorModal && (
         <div className="fixed inset-0 bg-[#000000]/95 z-[99999] flex items-center justify-center p-4">

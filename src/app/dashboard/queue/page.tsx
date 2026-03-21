@@ -28,7 +28,7 @@ export default function QueuePage() {
       const { data, error } = await supabase
         .from('scheduled_posts')
         .select('*')
-        .eq('status', 'scheduled')
+        .in('status', ['scheduled', 'content_ready', 'media_ready'])
         .order('scheduled_at', { ascending: true })
 
       if (!error) {
@@ -104,6 +104,13 @@ export default function QueuePage() {
                           {p}
                         </span>
                       ))}
+                      <span className={`px-3 py-1.5 rounded-xl border text-[9px] uppercase font-black tracking-widest ${
+                        post.status === 'content_ready' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                        post.status === 'media_ready' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                        'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      }`}>
+                        {post.status.replace('_', ' ')}
+                      </span>
                     </div>
                   </div>
                   
