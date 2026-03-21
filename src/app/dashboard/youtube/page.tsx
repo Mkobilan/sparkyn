@@ -123,8 +123,7 @@ export default function YoutubeDashboard() {
   }
       
   return (
-    <div className="flex min-h-screen bg-background text-white">
-      <Sidebar />
+    <div className="text-white relative">
       
       <main className="main-content flex-1 p-8 bg-gradient relative overflow-y-auto">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#FF0000]/5 rounded-full blur-[120px] pointer-events-none -z-10" />

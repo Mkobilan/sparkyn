@@ -127,11 +127,8 @@ export default function ConnectAccountsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <>
       <FacebookSDK appId="953923493837689" />
-      <Sidebar />
-
-      
       <main className="main-content bg-gradient relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
         
@@ -242,6 +239,6 @@ export default function ConnectAccountsPage() {
           </p>
         </div>
       </main>
-    </div>
+    </>
   )
 }

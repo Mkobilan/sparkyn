@@ -35,6 +35,7 @@ export async function POST(request: Request) {
             .update({
               subscription_tier: tier,
               stripe_customer_id: stripeCustomerId,
+              pending_tier: null,
             })
             .eq('id', userId);
 

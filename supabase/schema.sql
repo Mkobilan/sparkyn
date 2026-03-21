@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   content_tone TEXT DEFAULT 'Casual & Friendly',
   onboarding_completed BOOLEAN DEFAULT FALSE,
   subscription_tier TEXT DEFAULT 'free',
+  pending_tier TEXT,
   stripe_customer_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

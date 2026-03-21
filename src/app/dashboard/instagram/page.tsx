@@ -125,8 +125,7 @@ export default function InstagramDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-white relative">
-      <Sidebar />
+    <div className="text-white relative">
 
       {errorModal && (
         <div className="fixed inset-0 bg-[#000000]/95 z-[99999] flex items-center justify-center p-4">

@@ -106,10 +106,7 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      
-      <main className="main-content bg-gradient relative">
+    <main className="main-content bg-gradient relative">
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
 
         {/* Header */}
@@ -331,7 +328,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </main>
   )
 }

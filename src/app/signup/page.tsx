@@ -52,6 +52,9 @@ function SignupContent() {
       setError(error.message)
       setLoading(false)
     } else {
+      // If a tier was selected, we should attempt to mark it as pending
+      // Note: Full profile update might need to happen on the callback or after verification
+      // but we can try to include it in the user metadata for now.
       setSuccess(true)
       setLoading(false)
     }

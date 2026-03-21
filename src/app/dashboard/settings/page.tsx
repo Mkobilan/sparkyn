@@ -48,10 +48,7 @@ export default function SettingsPage() {
   )
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      
-      <main className="main-content bg-gradient relative">
+    <main className="main-content bg-gradient relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
         
         <div className="max-w-4xl space-y-8">
@@ -191,7 +188,6 @@ export default function SettingsPage() {
           </div>
           </div>
         </div>
-      </main>
-    </div>
+    </main>
   )
 }

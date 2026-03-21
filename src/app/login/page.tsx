@@ -31,6 +31,14 @@ function LoginContent() {
       setError(error.message)
       setLoading(false)
     } else {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user && tier) {
+        await supabase
+          .from('profiles')
+          .update({ pending_tier: tier })
+          .eq('id', user.id)
+      }
+      
       router.refresh()
       if (tier) {
         router.push(`/api/checkout?tier=${tier}`)

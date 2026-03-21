@@ -41,10 +41,7 @@ export default function QueuePage() {
   }, [supabase])
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      
-      <main className="main-content bg-gradient relative">
+    <main className="main-content bg-gradient relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
 
         {/* Header */}
@@ -146,7 +143,6 @@ export default function QueuePage() {
             </Link>
           </div>
         )}
-      </main>
-    </div>
+    </main>
   )
 }
