@@ -312,6 +312,23 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   background: hsl(var(--muted-foreground));
 }
 
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsla(var(--primary), 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsla(var(--primary), 0.4);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .grid-cols-2, .grid-cols-3 {

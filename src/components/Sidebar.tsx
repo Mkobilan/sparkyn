@@ -12,7 +12,11 @@ import {
   Sparkles,
   ChevronRight,
   User,
-  Zap
+  Zap,
+  Facebook,
+  Instagram,
+  Music2,
+  Play
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-browser'
 import { useEffect, useState } from 'react'
@@ -26,10 +30,10 @@ const navigation = [
 ]
 
 const platforms = [
-  { name: 'Facebook', href: '/dashboard/facebook', icon: Sparkles },
-  { name: 'Instagram', href: '/dashboard/instagram', icon: Sparkles },
-  { name: 'TikTok', href: '/dashboard/tiktok', icon: Sparkles },
-  { name: 'YouTube', href: '/dashboard/youtube', icon: Sparkles },
+  { name: 'Facebook', href: '/dashboard/facebook', icon: Facebook },
+  { name: 'Instagram', href: '/dashboard/instagram', icon: Instagram },
+  { name: 'TikTok', href: '/dashboard/tiktok', icon: Music2 },
+  { name: 'YouTube', href: '/dashboard/youtube', icon: Play },
 ]
 
 
@@ -65,9 +69,9 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="nav-sidebar glass grain">
-      {/* Branding */}
-      <div className="p-7 flex items-center gap-3.5">
+    <aside className="nav-sidebar glass grain flex flex-col h-full overflow-hidden">
+      {/* Branding - Fixed at top */}
+      <div className="p-7 flex items-center gap-3.5 shrink-0 border-b border-white/5 bg-black/20 backdrop-blur-md rounded-t-[1.5rem]">
         <img src="/sparkyn_logo.jpg" alt="Sparkyn Logo" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: '0.75rem', border: '1px solid hsla(36,95%,55%,0.2)' }} />
         <div className="flex flex-col">
           <span className="text-xl font-extrabold font-heading tracking-tight" style={{ color: 'white' }}>Sparkyn</span>
@@ -75,65 +79,80 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto min-h-0">
-        <div className="menu-label">Main Experience</div>
-        {navigation.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`nav-link ${isActive ? 'active' : ''}`}
-              style={{ marginBottom: '4px' }}
-            >
-              <div className="nav-icon shrink-0">
-                <item.icon className="w-[18px] h-[18px]" />
-              </div>
-              <span className="flex-1 truncate">{item.name}</span>
-              {isActive && (
-                <div className="w-1.5 h-1.5 rounded-full bg-white shrink-0 animate-pulse" />
-              )}
-            </Link>
-          )
-        })}
-        
-        <div className="menu-label mt-6">Social Platforms</div>
-        {platforms.map((platform) => {
-          const isActive = pathname === platform.href
-          return (
-            <Link
-              key={platform.name}
-              href={platform.href}
-              className={`nav-link ${isActive ? 'active' : ''}`}
-            >
-              <div className="nav-icon shrink-0">
-                <platform.icon className="w-[18px] h-[18px]" />
-              </div>
-              <span className="flex-1 truncate">{platform.name}</span>
-            </Link>
-          )
-        })}
-        
-        <div className="menu-label mt-6">Insights</div>
-        <Link 
-          href={profile?.subscription_tier === 'free' ? '/api/checkout?tier=pro' : '/dashboard'} 
-          className="nav-link"
-          style={{ opacity: profile?.subscription_tier === 'free' ? 0.6 : 1 }}
-        >
-          <div className="nav-icon">
-            <Zap className="w-[18px] h-[18px]" />
-          </div>
-          <span className="flex-1">AI Analytics</span>
-          {profile?.subscription_tier === 'free' && (
-            <div className="badge border-primary/20 bg-primary/10 text-primary text-[8px] scale-75">Pro</div>
-          )}
-        </Link>
-      </nav>
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4">
+        <nav className="space-y-1">
+          <div className="menu-label !pt-2">Main Experience</div>
+          {navigation.map((item) => {
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`nav-link ${isActive ? 'active' : ''}`}
+                style={{ marginBottom: '4px' }}
+              >
+                <div className="nav-icon shrink-0">
+                  <item.icon className="w-[18px] h-[18px]" />
+                </div>
+                <span className="flex-1 truncate">{item.name}</span>
+                {isActive && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-white shrink-0 animate-pulse" />
+                )}
+              </Link>
+            )
+          })}
+          
+          <div className="menu-label mt-6">Social Platforms</div>
+          {platforms.map((platform) => {
+            const isActive = pathname === platform.href
+            return (
+              <Link
+                key={platform.name}
+                href={platform.href}
+                className={`nav-link ${isActive ? 'active' : ''}`}
+              >
+                <div className="nav-icon shrink-0">
+                  <platform.icon className="w-[18px] h-[18px]" />
+                </div>
+                <span className="flex-1 truncate">{platform.name}</span>
+              </Link>
+            )
+          })}
+          
+          <div className="menu-label mt-6">Insights</div>
+          <Link 
+            href={profile?.subscription_tier === 'free' ? '/api/checkout?tier=pro' : '/dashboard'} 
+            className="nav-link"
+            style={{ opacity: profile?.subscription_tier === 'free' ? 0.6 : 1 }}
+          >
+            <div className="nav-icon">
+              <Zap className="w-[18px] h-[18px]" />
+            </div>
+            <span className="flex-1">AI Analytics</span>
+            {profile?.subscription_tier === 'free' && (
+              <div className="badge border-primary/20 bg-primary/10 text-primary text-[8px] scale-75">Pro</div>
+            )}
+          </Link>
+        </nav>
 
-      {/* Footer / User */}
-      <div className="mt-auto border-t border-white/5 pt-4 pb-4 shrink-0">
-        <div className="user-card mx-4 mb-4">
+        {/* Action Section */}
+        <div className="mt-8 px-2">
+          <button 
+            onClick={handleLogout}
+            className="nav-link w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 border-transparent hover:border-destructive/20 group transition-all"
+          >
+            <div className="nav-icon bg-destructive/5 border-destructive/10 group-hover:bg-destructive/20 group-hover:border-destructive/30">
+              <LogOut className="w-[18px] h-[18px] group-hover:-translate-x-0.5 transition-transform" />
+            </div>
+            <span className="font-black uppercase tracking-[0.15em] text-[10px]">Sign Out</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Footer / User - Fixed at bottom */}
+      <div className="mt-auto border-t border-white/5 p-4 shrink-0 bg-black/20 backdrop-blur-md rounded-b-[1.5rem]">
+        <div className="user-card !m-0">
           <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center border border-white/10 shrink-0">
             <User className="w-5 h-5 text-muted-foreground" />
           </div>
@@ -150,16 +169,6 @@ export default function Sidebar() {
           ) : (
             <Zap className="w-3.5 h-3.5 text-primary" />
           )}
-        </div>
-        
-        <div className="px-4">
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-3 text-muted-foreground hover:text-destructive transition-all text-xs font-bold uppercase tracking-widest group"
-          >
-            <LogOut className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span>Sign Out</span>
-          </button>
         </div>
       </div>
     </aside>
