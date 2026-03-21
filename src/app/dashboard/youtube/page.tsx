@@ -54,6 +54,14 @@ export default function YoutubeDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountId, publishNow, scheduledAt })
       })
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown server error');
+        const isTimeout = response.status === 504 || response.status === 408;
+        alert(isTimeout 
+          ? 'The request timed out. Video generation takes time — try again or schedule it instead.' 
+          : `Server error (${response.status}): ${errorText.slice(0, 200)}`);
+        return;
+      }
       const data = await response.json()
       if (data.success) {
         alert(publishNow ? 'Content published to YouTube!' : 'Content generated and added to queue!')

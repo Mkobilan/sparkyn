@@ -47,11 +47,17 @@ export const youtubeService = {
 
     // 2. Perform the upload
     try {
+      // Sanitize title for YouTube API: remove special chars, enforce max 100 chars
+      const cleanTitle = (params.title || 'New Short')
+        .replace(/[^\w\s\-!?.,'&]/g, '')  // Remove chars YouTube may reject
+        .trim()
+        .slice(0, 100) || 'New Short';
+
       const response = await youtube.videos.insert({
         part: ['snippet', 'status'],
         requestBody: {
           snippet: {
-            title: `#Shorts ${params.title}`, // Put #Shorts at the start
+            title: cleanTitle,
             description: `${params.description}\n\n#Shorts`,
             categoryId: '22', // People & Blogs
           },

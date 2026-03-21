@@ -5,6 +5,10 @@ import { youtubeService } from '../../../services/social/youtube'
 import { tiktokService } from '../../../services/social/tiktok'
 import { NextResponse } from 'next/server'
 
+// Video generation (AI images + TTS + FFmpeg) needs extended timeout
+export const maxDuration = 120; // seconds (Vercel Pro: up to 300s, Hobby: up to 60s)
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const { accountId, publishNow, scheduledAt, isVideo } = await request.json().catch(() => ({}));
