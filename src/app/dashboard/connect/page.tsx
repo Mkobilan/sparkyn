@@ -12,9 +12,13 @@ import {
   X, 
   CheckCircle2,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle,
+  Zap
 } from 'lucide-react'
 import FacebookSDK from '@/components/FacebookSDK'
+import { getTierLimits } from '@/lib/pricing'
+import Link from 'next/link'
 
 
 export default function ConnectAccountsPage() {
@@ -53,8 +57,13 @@ export default function ConnectAccountsPage() {
   ]
 
   const isConnected = (id: string) => profile?.platforms?.includes(id)
+  
+  const getPlatformCount = (id: string) => socialAccounts.filter(a => a.platform === id).length
+  const tierLimits = getTierLimits(profile?.subscription_tier)
+  const isLimitReached = (id: string) => getPlatformCount(id) >= tierLimits.accountsPerPlatform
 
   const handleConnect = (id: string) => {
+    if (isLimitReached(id)) return
     if (id === 'facebook' || id === 'instagram') {
       if (typeof window !== 'undefined' && window.FB) {
         window.FB.login((response: any) => {
@@ -186,6 +195,27 @@ export default function ConnectAccountsPage() {
                       </div>
                     ))}
                   </div>
+
+                  {isLimitReached(platform.id) ? (
+                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+                      <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+                        <AlertTriangle className="w-4 h-4" /> Limit Reached
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Your current <span className="text-white font-bold">{profile?.subscription_tier}</span> tier allows up to {tierLimits.accountsPerPlatform} {platform.name} connections.
+                      </p>
+                      <Link href="/api/checkout?tier=pro" className="btn btn-primary w-full text-[10px] h-9 py-0 font-black uppercase tracking-widest">
+                        Upgrade for More <Zap className="w-3 h-3 ml-2" />
+                      </Link>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => handleConnect(platform.id)}
+                      className="btn btn-outline w-full gap-2 border-dashed border-2"
+                    >
+                      <Plus className="w-4 h-4" /> Connect Another {platform.name}
+                    </button>
+                  )}
 
                   <button 
                     onClick={() => handleDisconnect(platform.id)}

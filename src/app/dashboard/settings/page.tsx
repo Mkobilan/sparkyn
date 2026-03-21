@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import Sidebar from '@/components/Sidebar'
-import { Save, User, Building, Trash2, Bell, AlertCircle, Loader2 } from 'lucide-react'
+import { Save, User, Building, Trash2, Bell, AlertCircle, Loader2, Zap, ShieldCheck, Check } from 'lucide-react'
+import { getTierLimits, PRICING_TIERS } from '@/lib/pricing'
+import Link from 'next/link'
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
@@ -114,6 +116,67 @@ export default function SettingsPage() {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* Subscription Section */}
+        <div className="glass rounded-[2rem] border border-border/50 overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+          <div className="p-8 border-b border-border/50 bg-white/5 flex items-center justify-between">
+            <h2 className="text-xl font-extrabold flex items-center gap-3 font-heading text-white">
+              <div className="p-2 bg-primary/20 rounded-lg">
+                <Zap className="w-5 h-5 text-primary" />
+              </div>
+              Subscription Plan
+            </h2>
+            <div className="px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-lg text-primary text-[10px] font-black uppercase tracking-widest">
+              {profile.subscription_tier || 'Free'} Tier
+            </div>
+          </div>
+          
+          <div className="p-8 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Daily Allowance</p>
+                <div className="flex items-end gap-2">
+                  <span className="text-3xl font-black text-white">{getTierLimits(profile.subscription_tier).postsPerDay}</span>
+                  <span className="text-xs text-muted-foreground pb-1">posts / day / channel</span>
+                </div>
+              </div>
+              
+              <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Account Limit</p>
+                <div className="flex items-end gap-2">
+                  <span className="text-3xl font-black text-white">
+                    {getTierLimits(profile.subscription_tier).accountsPerPlatform === 100 ? '∞' : getTierLimits(profile.subscription_tier).accountsPerPlatform}
+                  </span>
+                  <span className="text-xs text-muted-foreground pb-1">accounts / platform</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm font-bold text-white">Included Features:</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(PRICING_TIERS.find(t => t.id === profile.subscription_tier) || PRICING_TIERS[0]).features.map((feature, i) => (
+                  <div key={i} className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                    {feature}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {profile.subscription_tier !== 'enterprise' && (
+              <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="space-y-1">
+                  <p className="font-bold text-white">Need more capacity?</p>
+                  <p className="text-xs text-muted-foreground">Upgrade to a higher tier to unlock more daily posts and accounts.</p>
+                </div>
+                <Link href="/api/checkout?tier=pro" className="btn btn-primary px-8 py-3 rounded-xl font-bold gap-2 whitespace-nowrap shadow-[0_8px_20px_-6px_hsla(var(--primary),0.4)]">
+                  Upgrade Plan <Zap className="w-4 h-4 fill-black" />
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="glass p-8 rounded-[2rem] border border-destructive/20 space-y-6">

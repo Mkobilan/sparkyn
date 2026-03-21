@@ -4,6 +4,7 @@ import { metaService } from '../../../services/social/meta'
 import { youtubeService } from '../../../services/social/youtube'
 import { tiktokService } from '../../../services/social/tiktok'
 import { NextResponse } from 'next/server'
+import { getTierLimits } from '../../../lib/pricing'
 
 // Video generation (AI images + TTS + FFmpeg) needs extended timeout
 export const maxDuration = 60; // seconds (Hobby plan max)
@@ -32,8 +33,29 @@ export async function POST(request: Request) {
 
     const generatedPosts = []
     const generationErrors: string[] = []
+    const tierLimits = getTierLimits(profile.subscription_tier);
+
+    // Get today's start and end times for limit checking
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
 
     for (const account of accounts) {
+      // 0. CHECK DAILY LIMIT
+      const { count: todayCount } = await supabase
+        .from('scheduled_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('platform_account_id', account.id)
+        .gte('scheduled_at', todayStart.toISOString())
+        .lte('scheduled_at', todayEnd.toISOString());
+      
+      if ((todayCount || 0) >= tierLimits.postsPerDay) {
+        console.log(`Limit reached for ${account.platform_name}: ${todayCount}/${tierLimits.postsPerDay}`);
+        generationErrors.push(`[${account.platform_name}] Daily limit reached (${tierLimits.postsPerDay} posts/day). Upgrade for more.`);
+        continue;
+      }
+
       console.log(`Processing: ${account.platform_name}`)
       let currentAccessToken = account.access_token;
 

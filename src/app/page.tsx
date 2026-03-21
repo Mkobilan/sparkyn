@@ -155,7 +155,7 @@ export default function Home() {
                   className={`btn ${tier.highlight ? 'btn-primary' : 'btn-outline'}`}
                   style={{ width: '100%', height: 52, borderRadius: '0.75rem', fontWeight: 700 }}
                 >
-                  {tier.id === 'enterprise' ? 'Contact Sales' : 'Get Started'}
+                  Get Started
                 </Link>
               </div>
             ))}
