@@ -1,5 +1,5 @@
-import Link from 'next/link'
-import { Sparkles, ArrowRight, Zap, Globe, ShieldCheck, BarChart3, Clock, Layers, ChevronRight } from 'lucide-react'
+import { Sparkles, ArrowRight, Zap, Globe, ShieldCheck, BarChart3, Clock, Layers, ChevronRight, Check } from 'lucide-react'
+import { PRICING_TIERS } from '@/lib/pricing'
 
 export default function Home() {
   return (
@@ -26,8 +26,13 @@ export default function Home() {
         <div style={{ position: 'absolute', top: '-10%', left: '50%', transform: 'translateX(-50%)', width: 600, height: 600, background: 'radial-gradient(circle, hsla(36,95%,55%,0.08) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
 
         <div style={{ maxWidth: 780, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          <div className="badge" style={{ background: 'hsla(36,95%,55%,0.1)', border: '1px solid hsla(36,95%,55%,0.2)', color: 'hsl(36,95%,65%)', marginBottom: '1.5rem' }}>
-            <Zap style={{ width: 12, height: 12 }} /> Powered by Google Gemini AI
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="badge" style={{ background: 'hsla(36,95%,55%,0.1)', border: '1px solid hsla(36,95%,55%,0.2)', color: 'hsl(36,95%,65%)' }}>
+              <Zap style={{ width: 12, height: 12 }} /> Powered by Google Gemini AI
+            </div>
+            <div className="badge animate-pulse" style={{ background: 'hsla(145,65%,42%,0.1)', border: '1px solid hsla(145,65%,50%,0.2)', color: 'hsl(145,65%,60%)' }}>
+              Sparkyn Beta
+            </div>
           </div>
 
           <h1 style={{ fontSize: 'clamp(2.8rem, 6vw, 4.5rem)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.04em', marginBottom: '1.5rem' }}>
@@ -91,23 +96,66 @@ export default function Home() {
           ))}
         </section>
 
-        {/* ── HOW IT WORKS ── */}
-        <section style={{ marginTop: '6rem' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-            How It <span className="glow-text">Works</span>
-          </h2>
-          <p style={{ color: 'hsl(0,0%,50%)', marginBottom: '3rem', fontSize: '1rem' }}>Three steps. That's literally it.</p>
+        {/* ── PRICING ── */}
+        <section id="pricing" style={{ marginTop: '8rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem' }}>
+              Pricing <span className="glow-text">Tiers</span>
+            </h2>
+            <p style={{ color: 'hsl(0,0%,50%)', maxWidth: 600, margin: '0 auto', fontSize: '1.1rem', lineHeight: 1.6 }}>
+              Choose the plan that fits your growth. <br />
+              <span style={{ color: 'hsl(36,95%,55%)', fontWeight: 700 }}>Sparkyn is currently in beta!</span> More features are coming soon.
+            </p>
+            <div className="badge" style={{ background: 'hsla(36,95%,55%,0.1)', border: '1px solid hsla(36,95%,55%,0.3)', color: 'hsl(36,95%,65%)', marginTop: '1rem', padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+              Introductory prices. Lock them in while you can!
+            </div>
+          </div>
 
-          <div className="grid grid-cols-3 gap-6">
-            {[
-              { step: '01', title: 'Tell us about your brand', desc: 'Industry, tone, goals — our AI learns your style during onboarding.', icon: <Layers style={{ width: 18, height: 18 }} /> },
-              { step: '02', title: 'Connect your socials', desc: 'Link your Facebook, Instagram, TikTok, and YouTube in under a minute.', icon: <Globe style={{ width: 18, height: 18 }} /> },
-              { step: '03', title: 'Hit autopilot', desc: 'Sparkyn generates and publishes — daily. You just watch it grow.', icon: <Clock style={{ width: 18, height: 18 }} /> },
-            ].map((s, i) => (
-              <div key={i} style={{ textAlign: 'left', padding: '2rem', borderRadius: 'var(--radius)', border: '1px solid hsl(0,0%,14%)', background: 'hsl(0,0%,5%)' }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em', color: 'hsl(36,95%,55%)', textTransform: 'uppercase' as const }}>Step {s.step}</span>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0.75rem 0 0.5rem' }}>{s.title}</h3>
-                <p style={{ fontSize: '0.88rem', color: 'hsl(0,0%,50%)', lineHeight: 1.65 }}>{s.desc}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {PRICING_TIERS.map((tier) => (
+              <div 
+                key={tier.id} 
+                className={`card ${tier.highlight ? 'glow-amber' : ''}`}
+                style={{ 
+                  padding: '3rem 2rem', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  position: 'relative',
+                  border: tier.highlight ? '2px solid hsla(36,95%,55%,0.4)' : '1px solid hsl(0,0%,14%)',
+                  background: tier.highlight ? 'hsla(36,95%,55%,0.03)' : 'hsl(0,0%,5%)'
+                }}
+              >
+                {tier.highlight && (
+                  <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: 'hsl(36,95%,55%)', color: 'black', padding: '2px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                    Most Popular
+                  </div>
+                )}
+                <div style={{ marginBottom: '2rem' }}>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>{tier.name}</h3>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                    <span style={{ fontSize: '2.25rem', fontWeight: 900 }}>{tier.price}</span>
+                    <span style={{ color: 'hsl(0,0%,40%)', fontSize: '0.9rem' }}>/{tier.interval}</span>
+                  </div>
+                  <p style={{ fontSize: '0.9rem', color: 'hsl(0,0%,50%)', marginTop: '1rem', lineHeight: 1.6 }}>{tier.description}</p>
+                </div>
+                
+                <div style={{ flex: 1, marginBottom: '2.5rem' }}>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {tier.features.map((f, i) => (
+                      <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.88rem', color: 'hsl(0,0%,65%)' }}>
+                        <Check style={{ width: 16, height: 16, color: 'hsl(36,95%,55%)', flexShrink: 0 }} /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Link 
+                  href={`/signup?tier=${tier.id}`} 
+                  className={`btn ${tier.highlight ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ width: '100%', height: 52, borderRadius: '0.75rem', fontWeight: 700 }}
+                >
+                  {tier.id === 'enterprise' ? 'Contact Sales' : 'Get Started'}
+                </Link>
               </div>
             ))}
           </div>

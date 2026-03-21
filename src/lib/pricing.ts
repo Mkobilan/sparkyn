@@ -1,0 +1,47 @@
+export const PRICING_TIERS = [
+  {
+    id: 'basic',
+    name: 'Spark Basic',
+    price: '$9.99',
+    interval: 'month',
+    stripePriceId: process.env.STRIPE_PRICE_ID_BASIC || 'price_1TDKnMAgTHBqKLKlb1ywCHzZ',
+    description: 'Perfect for getting started with AI automation.',
+    features: [
+      '1 Social Channel per platform',
+      '10 AI-generated posts per month',
+      'Standard AI Image Generation',
+      'Email Support',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Spark Pro',
+    price: '$19.99',
+    interval: 'month',
+    stripePriceId: process.env.STRIPE_PRICE_ID_PRO || 'price_1TDKr3AgTHBqKLKlQ0nIrBIe',
+    description: 'The ultimate tool for growing creators and brands.',
+    features: [
+      '3 Social Channels per platform',
+      'Unlimited AI-generated posts',
+      'Priority AI Queue',
+      'Advanced Content Analytics',
+      'Priority Support',
+    ],
+    highlight: true,
+  },
+  {
+    id: 'enterprise',
+    name: 'Spark Enterprise',
+    price: '$29.99',
+    interval: 'month',
+    stripePriceId: process.env.STRIPE_PRICE_ID_ENTERPRISE || 'price_1TDKrxAgTHBqKLKlEKEZqp6b',
+    description: 'Scalable automation for agencies and large teams.',
+    features: [
+      'Unlimited Social Channels',
+      'Custom Brand Voice Training',
+      'White-label reports',
+      'API Access',
+      'Dedicated Account Manager',
+    ],
+  },
+];

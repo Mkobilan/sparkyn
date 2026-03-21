@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Sparkles, Mail, Lock, ArrowRight, Loader2, User, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 
@@ -17,6 +17,8 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const tier = searchParams.get('tier')
   const supabase = createClient()
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -42,7 +44,7 @@ export default function SignupPage() {
         data: {
           full_name: name,
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback${tier ? `?next=/api/checkout?tier=${tier}` : ''}`,
       },
     })
 
@@ -175,7 +177,7 @@ export default function SignupPage() {
 
         <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'hsl(0,0%,50%)', marginTop: '1.5rem' }}>
           Already have an account?{' '}
-          <Link href="/login" style={{ color: 'hsl(36,95%,55%)', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
+          <Link href={`/login${tier ? `?tier=${tier}` : ''}`} style={{ color: 'hsl(36,95%,55%)', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
         </p>
       </div>
     </div>

@@ -38,13 +38,25 @@ export default function Sidebar() {
   const router = useRouter()
   const supabase = createClient()
   const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const getUser = async () => {
+    const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+      
+      if (user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        setProfile(profileData)
+      }
+      setLoading(false)
     }
-    getUser()
+    fetchData()
   }, [supabase])
 
   const handleLogout = async () => {
@@ -103,13 +115,19 @@ export default function Sidebar() {
           )
         })}
         
-        <div className="menu-label">Insights</div>
-        <Link href="/dashboard" className="nav-link opacity-60 pointer-events-none">
+        <div className="menu-label mt-6">Insights</div>
+        <Link 
+          href={profile?.subscription_tier === 'free' ? '/api/checkout?tier=pro' : '/dashboard'} 
+          className="nav-link"
+          style={{ opacity: profile?.subscription_tier === 'free' ? 0.6 : 1 }}
+        >
           <div className="nav-icon">
             <Zap className="w-[18px] h-[18px]" />
           </div>
           <span className="flex-1">AI Analytics</span>
-          <div className="badge border-primary/20 bg-primary/10 text-primary text-[8px] scale-75">Pro</div>
+          {profile?.subscription_tier === 'free' && (
+            <div className="badge border-primary/20 bg-primary/10 text-primary text-[8px] scale-75">Pro</div>
+          )}
         </Link>
       </nav>
 
@@ -121,9 +139,17 @@ export default function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold truncate text-white">{user?.email?.split('@')[0] || 'Creator'}</p>
-            <p className="text-[9px] text-muted-foreground truncate uppercase tracking-widest font-heavy">Free Tier</p>
+            <p className="text-[9px] text-muted-foreground truncate uppercase tracking-widest font-heavy">
+              {profile?.subscription_tier || 'Free'} Tier
+            </p>
           </div>
-          <Zap className="w-3.5 h-3.5 text-primary shrink-0 animate-pulse" />
+          {profile?.subscription_tier === 'free' ? (
+            <Link href="/api/checkout?tier=pro" className="p-1.5 bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors">
+              <Zap className="w-3.5 h-3.5 text-primary animate-pulse" />
+            </Link>
+          ) : (
+            <Zap className="w-3.5 h-3.5 text-primary" />
+          )}
         </div>
         
         <div className="px-4">
