@@ -12,71 +12,178 @@ export default function PricingModal() {
     window.location.href = `/api/checkout?tier=${tierId}`
   }
 
-  return (
-    <div className="fixed inset-0 z-[10000] bg-[#050505] flex flex-col items-center justify-center p-6 overflow-y-auto">
-      {/* Background Glows */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+  // Define some custom colors based on globals.css variables
+  const primaryColor = 'hsl(var(--primary))'
+  const cardBg = 'hsl(var(--card))'
+  const successColor = 'hsl(var(--success))'
 
-      <div className="max-w-7xl w-full space-y-12 relative animate-in fade-in slide-in-from-bottom-5 duration-700">
-        <div className="text-center space-y-4 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-[0.2em]">
-            <Zap className="w-4 h-4 fill-current animate-pulse" /> Sparkyn Premium
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 10000,
+      backgroundColor: '#050505',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem',
+      overflowY: 'auto',
+      color: 'white'
+    }}>
+      {/* Ambient background glows */}
+      <div style={{
+        position: 'absolute',
+        top: '-10%',
+        left: '-10%',
+        width: '40%',
+        height: '40%',
+        backgroundColor: 'hsla(var(--primary), 0.1)',
+        borderRadius: '50%',
+        filter: 'blur(120px)',
+        pointerEvents: 'none'
+      }} />
+
+      <div style={{
+        maxWidth: '1200px',
+        width: '100%',
+        margin: '0 auto',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '3rem'
+      }}>
+        {/* Header section */}
+        <div style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
+          <div className="badge shimmer-border" style={{ 
+            color: 'white', 
+            marginBottom: '1.5rem',
+            padding: '0.5rem 1.25rem'
+          }}>
+            <Zap size={14} style={{ marginRight: '6px' }} /> Premium Experience
           </div>
-          <h1 className="text-6xl font-black font-heading tracking-tight text-white leading-tight">
-            Complete Your <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary-foreground">Subscription</span>
+          <h1 style={{ 
+            fontSize: '3.5rem', 
+            marginBottom: '1rem',
+            lineHeight: 1.1
+          }}>
+            Choose Your <span style={{ color: primaryColor }}>Automation Plan</span>
           </h1>
-          <p className="text-muted-foreground text-xl font-medium max-w-xl mx-auto">
-            You&apos;re one step away from 24/7 AI-powered social automation. Choose a tier to unlock your dashboard.
+          <p style={{ color: 'hsl(var(--muted-foreground))', fontSize: '1.2rem', fontWeight: 500 }}>
+            Select a tier to activate your dashboard. Lock in these introductory rates while they last.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* Pricing Cards Grid */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'nowrap',
+          gap: '2.5rem',
+          justifyContent: 'center',
+          alignItems: 'stretch',
+          padding: '1rem'
+        }}>
           {PRICING_TIERS.map((tier) => (
             <div 
               key={tier.id} 
-              className={`relative flex flex-col p-10 rounded-[2.5rem] border transition-all duration-500 group ${
-                tier.highlight 
-                ? 'bg-[#0f0f0f] border-primary/40 shadow-[0_0_80px_-20px_hsla(var(--primary),0.3)] ring-1 ring-primary/30 scale-105 z-10' 
-                : 'bg-[#0a0a0a] border-white/5 hover:border-white/10 hover:bg-[#0c0c0c]'
-              }`}
+              className="card glow-amber"
+              style={{
+                flex: '1 1 350px',
+                minWidth: '350px',
+                maxWidth: '400px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2.5rem',
+                padding: '3rem',
+                backgroundColor: tier.highlight ? '#0f0f0f' : '#070707',
+                border: `2px solid ${tier.highlight ? primaryColor : 'rgba(255,255,255,0.05)'}`,
+                borderRadius: '3rem',
+                position: 'relative',
+                transform: tier.highlight ? 'scale(1.05)' : 'scale(1)',
+                zIndex: tier.highlight ? 10 : 1,
+                boxShadow: tier.highlight ? `0 25px 50px -12px hsla(var(--primary), 0.25)` : 'none',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
             >
               {tier.highlight && (
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 px-6 py-2 bg-primary text-black text-[11px] font-black uppercase tracking-widest rounded-full shadow-[0_4px_20px_rgba(var(--primary),0.5)]">
-                  Recommended Choice
+                <div style={{
+                  position: 'absolute',
+                  top: '-15px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: primaryColor,
+                  color: 'black',
+                  padding: '4px 16px',
+                  borderRadius: '999px',
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  boxShadow: `0 4px 20px hsla(var(--primary), 0.4)`
+                }}>
+                  Recommended
                 </div>
               )}
 
-              <div className="space-y-6 mb-8">
-                <div className="flex items-center justify-between">
-                  <div className={`p-4 rounded-2xl ${tier.highlight ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground'}`}>
-                    {tier.id === 'basic' && <Sparkles className="w-8 h-8" />}
-                    {tier.id === 'pro' && <Zap className="w-8 h-8" />}
-                    {tier.id === 'enterprise' && <Building className="w-8 h-8" />}
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-black uppercase tracking-widest ${tier.highlight ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {tier.name.split(' ')[1]}
-                    </p>
-                    <div className="flex items-baseline justify-end gap-1">
-                      <span className="text-4xl font-black text-white">{tier.price}</span>
-                      <span className="text-muted-foreground text-xs">/mo</span>
-                    </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '1rem',
+                  backgroundColor: tier.highlight ? 'hsla(var(--primary), 0.1)' : 'hsla(0,0%,100%,0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: tier.highlight ? primaryColor : 'white'
+                }}>
+                  {tier.id === 'basic' && <Sparkles size={28} />}
+                  {tier.id === 'pro' && <Zap size={28} />}
+                  {tier.id === 'enterprise' && <Building size={28} />}
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ 
+                    fontSize: '0.7rem', 
+                    fontWeight: 800, 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.1em',
+                    color: tier.highlight ? primaryColor : 'hsl(var(--muted-foreground))',
+                    marginBottom: '4px'
+                  }}>
+                    {tier.name.split(' ')[1]} Plan
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '2px' }}>
+                    <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>{tier.price}</span>
+                    <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>/mo</span>
                   </div>
                 </div>
-                <p className="text-muted-foreground text-sm font-medium leading-relaxed italic border-l-2 border-primary/20 pl-4">
-                  {tier.description}
-                </p>
               </div>
 
-              <div className="flex-1 space-y-6 mb-10">
-                <div className="space-y-4">
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <p style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(var(--muted-foreground))', letterSpacing: '0.1em' }}>
+                  Features Included:
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {tier.features.map((feature, i) => (
-                    <div key={i} className="flex items-start gap-4 text-sm text-gray-300">
-                      <div className={`mt-1 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${tier.highlight ? 'bg-primary/20 text-primary' : 'bg-white/10 text-white/40'}`}>
-                        <Check className="w-3 h-3 stroke-[4]" />
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{
+                        marginTop: '2px',
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        backgroundColor: tier.highlight ? 'hsla(var(--primary), 0.2)' : 'hsla(0,0%,100%,0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: tier.highlight ? primaryColor : 'white',
+                        flexShrink: 0
+                      }}>
+                        <Check size={12} strokeWidth={4} />
                       </div>
-                      <span className="font-medium">{feature}</span>
+                      <span style={{ fontSize: '0.9rem', color: '#ccc', fontWeight: 500 }}>{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -85,18 +192,26 @@ export default function PricingModal() {
               <button 
                 onClick={() => handleSubscribe(tier.id)}
                 disabled={!!loadingTier}
-                className={`w-full py-5 rounded-[1.25rem] font-black text-xs uppercase tracking-[0.2em] gap-3 flex items-center justify-center transition-all duration-300 group ${
-                  tier.highlight 
-                  ? 'bg-primary text-black hover:scale-[1.02] shadow-[0_15px_30px_rgba(var(--primary),0.3)] active:scale-95' 
-                  : 'bg-white text-black hover:bg-white/90 active:scale-95'
-                }`}
+                className={tier.highlight ? 'btn btn-primary' : 'btn btn-outline'}
+                style={{
+                  width: '100%',
+                  padding: '1.25rem',
+                  borderRadius: '1rem',
+                  fontSize: '0.9rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px'
+                }}
               >
                 {loadingTier === tier.id ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 size={20} className="animate-spin" />
                 ) : (
                   <>
-                    Activate Plan
-                    <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    Activate Plan <ChevronRight size={18} />
                   </>
                 )}
               </button>
@@ -104,15 +219,23 @@ export default function PricingModal() {
           ))}
         </div>
 
-        <div className="flex flex-col items-center gap-4 text-center">
-          <p className="text-xs text-muted-foreground font-black uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-[1px] bg-white/10" />
-            Locked-in Intro Pricing
-            <span className="w-8 h-[1px] bg-white/10" />
+        {/* Footer trust badges */}
+        <div style={{ 
+          textAlign: 'center', 
+          opacity: 0.5, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+            Payments processed securely by Stripe
           </p>
-          <div className="flex gap-8 opacity-50">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-5 brightness-0 invert" />
-          </div>
+          <img 
+            src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" 
+            alt="Stripe" 
+            style={{ height: '24px', filter: 'brightness(0) invert(1)' }} 
+          />
         </div>
       </div>
     </div>
