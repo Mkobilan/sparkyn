@@ -30,19 +30,19 @@ export async function POST(request: Request) {
     // 2. Parse Fallback Metadata
     const rawMeta = post.hashtags?.find((h: string) => h.startsWith('__METADATA__:'));
     const metadata = rawMeta ? JSON.parse(rawMeta.replace('__METADATA__:', '')) : {};
-    const { isVideo, imageBase64, audioUrl } = metadata;
+    const { isVideo, imageUrl, audioUrl } = metadata;
 
-    if (!imageBase64) throw new Error("Metadata missing (imageBase64)");
+    if (!imageUrl) throw new Error("Metadata missing (imageUrl)");
 
     // ── STEP: FINAL COMPILATION ──
     console.log(`[Waterfall-Compile] Finalizing ${isVideo ? 'VIDEO' : 'IMAGE'} for post ${postId}`);
     let finalMediaDataUri: string;
 
     if (isVideo && audioUrl) {
-        const videoResult = await videoService.compileShortVideoFromAssets([imageBase64], audioUrl);
+        const videoResult = await videoService.compileShortVideoFromAssets([imageUrl], audioUrl);
         finalMediaDataUri = videoResult.videoDataUri;
     } else {
-        finalMediaDataUri = imageBase64;
+        finalMediaDataUri = imageUrl; // It's already a URL, so we can pass it to the uploader
     }
 
     // ── UPLOAD TO STORAGE ──

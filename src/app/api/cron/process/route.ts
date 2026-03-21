@@ -56,8 +56,25 @@ async function handleCron(request: Request) {
             const prompt = isVideo ? `Context: ${imageContext}. Subject: ${subject}` : imageContext;
 
             const mediaDataUri = await aiService.generateImage(prompt, post.caption, isVideo ? 512 : 1024, isVideo ? 896 : 1024);
-            metadata.imageBase64 = mediaDataUri;
             
+            // Upload to storage immediately to prevent base64 corruption
+            let bytes: Buffer;
+            let contentType: string;
+            if (mediaDataUri.startsWith('data:')) {
+                contentType = mediaDataUri.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
+                bytes = Buffer.from(mediaDataUri.split(',')[1], 'base64');
+            } else {
+                const res = await fetch(mediaDataUri);
+                bytes = Buffer.from(await res.arrayBuffer());
+                contentType = res.headers.get('content-type') || 'image/jpeg';
+            }
+
+            const ext = contentType.includes('png') ? 'png' : 'jpg';
+            const filename = `cron_inter_${post.id}_${Date.now()}.${ext}`;
+            await supabaseAdmin.storage.from('generated-images').upload(filename, bytes, { contentType });
+            metadata.imageUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
+            delete metadata.imageBase64;
+
             const updatedMeta = `__METADATA__:${JSON.stringify(metadata)}`;
             const updatedHashtags = (post.hashtags || []).map((h: string) => h.startsWith('__METADATA__:') ? updatedMeta : h);
 
@@ -117,19 +134,18 @@ async function handleCron(request: Request) {
         try {
             const rawMeta = post.hashtags?.find((h: string) => h.startsWith('__METADATA__:'));
             const metadata = rawMeta ? JSON.parse(rawMeta.replace('__METADATA__:', '')) : {};
+            const { isVideo, imageUrl, audioUrl } = metadata;
             
             let finalUrl = '';
-            if (metadata.isVideo && metadata.audioUrl) {
-                const res = await videoService.compileShortVideoFromAssets([metadata.imageBase64], metadata.audioUrl);
+            if (isVideo && audioUrl) {
+                // compileShortVideoFromAssets handles URLs automatically
+                const res = await videoService.compileShortVideoFromAssets([imageUrl], audioUrl);
                 const bytes = Buffer.from(res.videoDataUri.split(',')[1], 'base64');
                 const filename = `cron_vid_${post.id}_${Date.now()}.mp4`;
                 await supabaseAdmin.storage.from('generated-images').upload(filename, bytes, { contentType: 'video/mp4' });
                 finalUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
             } else {
-                const bytes = Buffer.from(metadata.imageBase64.split(',')[1], 'base64');
-                const filename = `cron_img_${post.id}_${Date.now()}.jpg`;
-                await supabaseAdmin.storage.from('generated-images').upload(filename, bytes, { contentType: 'image/jpeg' });
-                finalUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
+                finalUrl = imageUrl;
             }
 
             const cleanHashtags = (post.hashtags || []).filter((h: string) => !h.startsWith('__METADATA__:'));

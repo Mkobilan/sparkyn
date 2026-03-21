@@ -45,8 +45,34 @@ export async function POST(request: Request) {
       isVideo ? 896 : 1024
     );
 
+    // ── UPLOAD TO STORAGE IMMEDIATELY ──
+    // This prevents base64 corruption in Postgres metadata columns
+    console.log(`[Waterfall-Image] Uploading intermediate image to storage...`);
+    let bytes: Buffer;
+    let contentType: string;
+    if (mediaDataUri.startsWith('data:')) {
+      contentType = mediaDataUri.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
+      bytes = Buffer.from(mediaDataUri.split(',')[1], 'base64');
+    } else {
+      const res = await fetch(mediaDataUri);
+      bytes = Buffer.from(await res.arrayBuffer());
+      contentType = res.headers.get('content-type') || 'image/jpeg';
+    }
+
+    const { supabaseAdmin } = await import('../../../../../lib/supabase-admin');
+    const ext = contentType.includes('png') ? 'png' : 'jpg';
+    const filename = `inter_${user.id}_${Date.now()}.${ext}`;
+    
+    const { error: uploadErr } = await supabaseAdmin.storage
+      .from('generated-images')
+      .upload(filename, bytes, { contentType });
+    
+    if (uploadErr) throw new Error(`Intermediate storage upload failed: ${uploadErr.message}`);
+    const imageUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
+
     // ── UPDATE METADATA ──
-    metadata.imageBase64 = mediaDataUri;
+    delete metadata.imageBase64; // Cleanup old junk if any
+    metadata.imageUrl = imageUrl;
     const updatedMeta = `__METADATA__:${JSON.stringify(metadata)}`;
     const updatedHashtags = (post.hashtags || []).map((h: string) => h.startsWith('__METADATA__:') ? updatedMeta : h);
 
