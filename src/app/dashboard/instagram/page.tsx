@@ -66,27 +66,47 @@ export default function InstagramDashboard() {
       const postId = genData.posts?.[0]?.id;
       if (!postId) throw new Error("No Post ID returned from generation.");
 
-      // ── WATERFALL STEP 2: GENERATE MEDIA (IMAGE/REEL) ──
-      setProgressMsg(isVideo ? "Step 2/3: Compiling AI Reel (this takes 30s)..." : "Step 2/3: Generating AI Image...")
-      const mediaRes = await fetch('/api/generate/media', {
+      // ── WATERFALL STEP 2: GENERATE AI IMAGE ──
+      setProgressMsg("Step 2/5: Generating AI Imagery...")
+      const imgRes = await fetch('/api/generate/media/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId })
       })
-      if (!mediaRes.ok) throw new Error(`[Media Gen] ${await mediaRes.text()}`);
+      if (!imgRes.ok) throw new Error(`[Image Gen] ${await imgRes.text()}`);
+
+      // ── WATERFALL STEP 3: GENERATE AUDIO (VIDEO ONLY) ──
+      if (isVideo) {
+        setProgressMsg("Step 3/5: Vocalizing Video Script...")
+        const audRes = await fetch('/api/generate/media/audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId })
+        })
+        if (!audRes.ok) throw new Error(`[Audio Gen] ${await audRes.text()}`);
+      }
+
+      // ── WATERFALL STEP 4: FINAL COMPILATION ──
+      setProgressMsg(isVideo ? "Step 4/5: Compiling Final Video..." : "Step 4/5: Finalizing Media Assets...")
+      const compileRes = await fetch('/api/generate/media/compile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId })
+      })
+      if (!compileRes.ok) throw new Error(`[Compilation] ${await compileRes.text()}`);
       
-      // ── WATERFALL STEP 3: PUBLISH NOW (IF REQUESTED) ──
+      // ── WATERFALL STEP 5: PUBLISH NOW (IF REQUESTED) ──
       if (publishNow) {
-        setProgressMsg("Step 3/3: Posting live to Instagram...")
+        setProgressMsg("Step 5/5: Posting live to Instagram...")
         const pubRes = await fetch('/api/publish/now', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ postId })
         })
         if (!pubRes.ok) throw new Error(`[Publish] ${await pubRes.text()}`);
-        setErrorModal({ isOpen: true, message: '✅ Instagram post published successfully!', details: null })
+        setErrorModal({ isOpen: true, message: '✅ Instagram Reel published successfully!' })
       } else {
-        setErrorModal({ isOpen: true, message: '📅 Content generated and scheduled!', details: null })
+        setErrorModal({ isOpen: true, message: '📅 Reel generated and scheduled!' })
       }
 
       fetchAccounts()

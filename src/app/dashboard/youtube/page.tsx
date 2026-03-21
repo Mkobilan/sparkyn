@@ -53,40 +53,60 @@ export default function YoutubeDashboard() {
     setProgressMsg("Step 1/3: Writing AI Script...")
     try {
       const scheduledAt = scheduledTimes[accountId]
-      
+      const isVideo = true; // Always true for YouTube Shorts
+
       // ── WATERFALL STEP 1: GENERATE CONTENT ──
       const genRes = await fetch('/api/generate', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, scheduledAt, isVideo: true })
+        body: JSON.stringify({ accountId, scheduledAt, isVideo })
       })
       if (!genRes.ok) throw new Error(`[Script Gen] ${await genRes.text()}`);
       const genData = await genRes.json();
       const postId = genData.posts?.[0]?.id;
       if (!postId) throw new Error("No Post ID returned from generation.");
 
-      // ── WATERFALL STEP 2: GENERATE MEDIA (VIDEO) ──
-      setProgressMsg("Step 2/3: Compiling AI Video (this takes 30s)...")
-      const mediaRes = await fetch('/api/generate/media', {
+      // ── WATERFALL STEP 2: GENERATE AI IMAGE ──
+      setProgressMsg("Step 2/5: Generating AI Imagery...")
+      const imgRes = await fetch('/api/generate/media/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId })
       })
-      if (!mediaRes.ok) throw new Error(`[Media Gen] ${await mediaRes.text()}`);
+      if (!imgRes.ok) throw new Error(`[Image Gen] ${await imgRes.text()}`);
+
+      // ── WATERFALL STEP 3: GENERATE AUDIO (VIDEO ONLY) ──
+      if (isVideo) {
+        setProgressMsg("Step 3/5: Vocalizing Video Script...")
+        const audRes = await fetch('/api/generate/media/audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId })
+        })
+        if (!audRes.ok) throw new Error(`[Audio Gen] ${await audRes.text()}`);
+      }
+
+      // ── WATERFALL STEP 4: FINAL COMPILATION ──
+      setProgressMsg(isVideo ? "Step 4/5: Compiling Final Video..." : "Step 4/5: Finalizing Media Assets...")
+      const compileRes = await fetch('/api/generate/media/compile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId })
+      })
+      if (!compileRes.ok) throw new Error(`[Compilation] ${await compileRes.text()}`);
       
-      // ── WATERFALL STEP 3: PUBLISH NOW (IF REQUESTED) ──
+      // ── WATERFALL STEP 5: PUBLISH NOW (IF REQUESTED) ──
       if (publishNow) {
-        setProgressMsg("Step 3/3: Publishing Short to YouTube...")
+        setProgressMsg("Step 5/5: Posting live to YouTube...")
         const pubRes = await fetch('/api/publish/now', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ postId })
         })
         if (!pubRes.ok) throw new Error(`[Publish] ${await pubRes.text()}`);
-        const pubData = await pubRes.json();
-        setErrorModal({ isOpen: true, message: `✅ YouTube Short published! View it: ${pubData.url}` })
+        setErrorModal({ isOpen: true, message: '✅ YouTube Short published successfully!' })
       } else {
-        setErrorModal({ isOpen: true, message: `📅 Short generated and scheduled!` })
+        setErrorModal({ isOpen: true, message: '📅 Short generated and scheduled!' })
       }
 
       fetchChannels()

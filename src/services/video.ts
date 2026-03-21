@@ -15,6 +15,89 @@ interface VideoResult {
 
 export class VideoService {
     
+    async compileShortVideoFromAssets(imagesBase64: string[], audioUrl: string): Promise<VideoResult> {
+        console.log("Initializing Video FFmpeg compiler from assets...");
+        const jobId = Math.random().toString(36).substring(7);
+        const tmpDir = os.tmpdir();
+        
+        try {
+            const audioPath = path.join(tmpDir, `final_aud_${jobId}.mp3`);
+            const outputPath = path.join(tmpDir, `out_${jobId}.mp4`);
+            
+            // 1. Fetch Audio
+            const audioRes = await fetch(audioUrl);
+            await fs.writeFile(audioPath, Buffer.from(await audioRes.arrayBuffer()));
+
+            // 2. Save Images to disk
+            const numImages = imagesBase64.length;
+            const imgPaths: string[] = [];
+            for (let i = 0; i < numImages; i++) {
+                let imageBuffer: Buffer;
+                let ext = 'jpg';
+                if (imagesBase64[i].startsWith('data:')) {
+                    const mime = imagesBase64[i].match(/data:(.*);base64/)?.[1];
+                    if (mime === 'image/png') ext = 'png';
+                    const base64Data = imagesBase64[i].split(',')[1];
+                    imageBuffer = Buffer.from(base64Data, 'base64');
+                } else {
+                    imageBuffer = Buffer.from(imagesBase64[i], 'base64');
+                }
+                const imgPath = path.join(tmpDir, `img_${jobId}_${i}.${ext}`);
+                await fs.writeFile(imgPath, imageBuffer);
+                imgPaths.push(imgPath);
+            }
+
+            // 3. FFmpeg Render (Faster because assets are local)
+            const audioInputIndex = numImages;
+            const framesPerImage = Math.ceil(15 / numImages * 30);
+            const videoFilters = imagesBase64.map((_, i) => 
+                `[${i}:v]format=pix_fmts=yuv420p,setsar=1,scale=576:1024:force_original_aspect_ratio=increase,crop=576:1024,loop=loop=${framesPerImage}:size=1:start=0[v${i}]`
+            );
+            videoFilters.push(`${imagesBase64.map((_, i) => `[v${i}]`).join('')}concat=n=${numImages}:v=1:a=0[outv]`);
+
+            await new Promise<void>((resolve, reject) => {
+                const ff = ffmpeg();
+                for (let i = 0; i < numImages; i++) ff.input(imgPaths[i]);
+                ff.input(audioPath);
+                
+                ff.outputOptions([
+                    '-filter_complex', videoFilters.join(';'),
+                    '-map', '[outv]',
+                    '-map', `${audioInputIndex}:a`,
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast',
+                    '-crf', '28',
+                    '-pix_fmt', 'yuv420p',
+                    '-r', '30',
+                    '-c:a', 'aac',
+                    '-b:a', '96k',
+                    '-movflags', '+faststart',
+                    '-shortest',
+                    '-t', '15',
+                ])
+                .save(outputPath)
+                .on('end', () => resolve())
+                .on('error', (err) => reject(new Error(`FFmpeg assets error: ${err.message}`)));
+            });
+
+            const videoBuffer = await fs.readFile(outputPath);
+            
+            // Cleanup
+            await Promise.all([
+                fs.unlink(audioPath).catch(() => {}),
+                fs.unlink(outputPath).catch(() => {}),
+                ...imgPaths.map(p => fs.unlink(p).catch(() => {}))
+            ]);
+
+            return {
+                videoDataUri: `data:video/mp4;base64,${videoBuffer.toString('base64')}`,
+                ttsStatus: 'pre-generated',
+            };
+        } catch (error: any) {
+            throw new Error(`Asset Compiler Exception: ${error.message}`);
+        }
+    }
+
     async compileShortVideo(imagesBase64: string[], script: string): Promise<VideoResult> {
         console.log("Initializing Video FFmpeg compiler...");
         const jobId = Math.random().toString(36).substring(7);

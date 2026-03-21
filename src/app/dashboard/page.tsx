@@ -74,7 +74,7 @@ export default function DashboardPage() {
 
   const handleGenerate = async () => {
     setIsGenerating(true)
-    setProgressMsg("Step 1/3: Writing AI Scripts for all platforms...")
+    setProgressMsg("Step 1/5: Writing AI Scripts for all platforms...")
     try {
       // ── WATERFALL STEP 1: GENERATE CONTENT ──
       const genRes = await fetch('/api/generate', { 
@@ -90,38 +90,62 @@ export default function DashboardPage() {
         return;
       }
 
-      // ── WATERFALL STEP 2: GENERATE MEDIA FOR EACH POST ──
-      for (const post of posts) {
-        setProgressMsg(`Step 2/3: Compiling Media for ${post.platform}...`)
-        const mediaRes = await fetch('/api/generate/media', {
+      // ── WATERFALL STEP 2: GENERATE IMAGES ──
+      setProgressMsg("Step 2/5: Generating AI Imagery...")
+      await Promise.all(posts.map(async (post: any) => {
+        const res = await fetch('/api/generate/media/image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ postId: post.id })
         });
-        if (!mediaRes.ok) console.error(`[Media Gen] Failed for ${post.id}:`, await mediaRes.text());
-        
-        // ── WATERFALL STEP 3: PUBLISH NOW ──
-        setProgressMsg(`Step 3/3: Publishing ${post.platform} live...`)
-        const pubRes = await fetch('/api/publish/now', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ postId: post.id })
-        });
-        if (!pubRes.ok) console.error(`[Publish] Failed for ${post.id}:`, await pubRes.text());
-      }
+        if (!res.ok) console.error(`[Image Gen] Failed for ${post.id}:`, await res.text());
+      }));
 
-      setLastResults({ success: true, posts });
-      fetchDashboardData();
-    } catch (error: any) {
-      console.error("Main Dashboard Waterfall Error:", error)
-      const isTimeout = error.message?.includes('504') || error.message?.includes('timeout');
+      // ── WATERFALL STEP 3: GENERATE AUDIO (IF VIDEO) ──
+      setProgressMsg("Step 3/5: Vocalizing Video Scripts...")
+      await Promise.all(posts.map(async (post: any) => {
+        const res = await fetch('/api/generate/media/audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: post.id })
+        });
+        if (!res.ok) console.error(`[Audio Gen] Failed for ${post.id}:`, await res.text());
+      }));
+
+      // ── WATERFALL STEP 4: FINAL COMPILATION ──
+      setProgressMsg("Step 4/5: Finalizing Media Production...")
+      await Promise.all(posts.map(async (post: any) => {
+        const res = await fetch('/api/generate/media/compile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: post.id })
+        });
+        if (!res.ok) console.error(`[Compilation] Failed for ${post.id}:`, await res.text());
+      }));
+
+      // ── WATERFALL STEP 5: PUBLISH ──
+      setProgressMsg("Step 5/5: Sending live to all platforms!")
+      await Promise.all(posts.map(async (post: any) => {
+        const res = await fetch('/api/publish/now', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: post.id })
+        });
+        if (!res.ok) console.error(`[Publish] Failed for ${post.id}:`, await res.text());
+      }));
+
       setErrorModal({ 
         isOpen: true, 
-        message: isTimeout 
-          ? 'The request timed out. High traffic on AI models—please try again.'
-          : `Waterfall Failure: ${error.message}`,
+        message: '🚀 ALL CONTENT PUBLISHED! Your cross-platform campaign is now live.' 
+      })
+      fetchDashboardData()
+    } catch (error: any) {
+      console.error("Main Dashboard Waterfall Error:", error)
+      setErrorModal({ 
+        isOpen: true, 
+        message: `Waterfall Failure: ${error.message}`,
         details: error
-      });
+      })
     } finally {
       setIsGenerating(false)
       setProgressMsg(null)

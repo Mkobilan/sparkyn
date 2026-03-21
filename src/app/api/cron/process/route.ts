@@ -20,227 +20,170 @@ async function handleCron(request: Request) {
   const results: string[] = [];
 
   try {
-    // --- STAGE 1: MEDIA GENERATION ---
-    // Use .like() to match the placeholder URL prefix (catches both plain and &type=video variants)
-    const PLACEHOLDER_PREFIX = 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b%';
-    const { data: mediaPending, error: mediaErr } = await supabaseAdmin
+    const { aiService } = await import('@/services/ai');
+    const { videoService } = await import('@/services/video');
+    const { metaService } = await import('@/services/social/meta');
+    const { youtubeService } = await import('@/services/social/youtube');
+    const { tiktokService } = await import('@/services/social/tiktok');
+
+    // ── STAGE 1: SCRIPT GEN (FALLBACK FROM 'scheduled' IF NEEDED) ──
+    // This is handled by api/generate usually, but we keep it here for robustness
+    const { data: scriptPending } = await supabaseAdmin
       .from('scheduled_posts')
       .select('*, social_accounts!platform_account_id(*), profiles!user_id(*)')
-      .or('status.eq.content_ready,and(status.eq.scheduled,image_url.like.https://images.unsplash.com/photo-1544367567-0f2fcb009e0b%)')
-      .limit(5);
+      .eq('status', 'scheduled')
+      .lte('scheduled_at', new Date(Date.now() + 600000).toISOString()) // Within 10 mins
+      .limit(3);
 
-    if (mediaErr) {
-      console.error('[Cron Stage 1] Query error:', mediaErr.message);
+    for (const post of (scriptPending || [])) {
+       // Logic to trigger Step 1 if skipped... 
+       // For now, we assume Step 1 is done by the dashboard or a separate trigger.
     }
 
-    if (mediaPending && mediaPending.length > 0) {
-      console.log(`[Cron Stage 1] Found ${mediaPending.length} posts needing media generation.`);
+    // ── STAGE 2: IMAGE GENERATION (status: 'content_ready') ──
+    const { data: imagePending } = await supabaseAdmin
+      .from('scheduled_posts')
+      .select('*, social_accounts!platform_account_id(*), profiles!user_id(*)')
+      .eq('status', 'content_ready')
+      .limit(2);
 
-      for (const post of mediaPending) {
+    for (const post of (imagePending || [])) {
         try {
-          console.log(`[Cron Stage 1] Generating media for post ${post.id} (platform: ${post.platforms?.[0] || 'unknown'})`);
-          const account = post.social_accounts;
-          const profile = post.profiles;
+            const rawMeta = post.hashtags?.find((h: string) => h.startsWith('__METADATA__:'));
+            const metadata = rawMeta ? JSON.parse(rawMeta.replace('__METADATA__:', '')) : {};
+            const { imageContext, videoScript, isVideo } = metadata;
+            const subject = isVideo && videoScript ? videoScript.imagePrompts[0] : post.caption;
+            const prompt = isVideo ? `Context: ${imageContext}. Subject: ${subject}` : imageContext;
 
-          if (!account || !profile) {
-            console.error(`[Cron Stage 1] Missing account or profile for post ${post.id}. account=${!!account}, profile=${!!profile}`);
-            await supabaseAdmin.from('scheduled_posts').update({ 
-              status: 'failed', 
-              error_message: 'Missing account or profile data' 
-            }).eq('id', post.id);
-            results.push(`${post.id}: failed (missing data)`);
-            continue;
-          }
+            const mediaDataUri = await aiService.generateImage(prompt, post.caption, isVideo ? 512 : 1024, isVideo ? 896 : 1024);
+            metadata.imageBase64 = mediaDataUri;
+            
+            const updatedMeta = `__METADATA__:${JSON.stringify(metadata)}`;
+            const updatedHashtags = (post.hashtags || []).map((h: string) => h.startsWith('__METADATA__:') ? updatedMeta : h);
 
-          // Check the URL for the type flag OR the platform default
-          const isVideo = post.image_url?.includes('type=video') || 
-                          ['tiktok', 'instagramreels', 'youtube'].includes(account.platform);
-
-          const imageContext = `${account?.metadata?.industry || profile?.industry || 'Business'} business - ${account?.metadata?.description || profile?.business_description || 'General'}`;
-          const { aiService } = await import('@/services/ai');
-
-          let finalMediaUrl = '';
-          if (isVideo) {
-            console.log(`[Cron Stage 1] Video pipeline for post ${post.id}`);
-            const { script, imagePrompts } = await aiService.generateShortVideoScript(imageContext, post.caption);
-            const imageBase64 = await aiService.generateImage(
-              `Context: ${imageContext}. Subject: ${imagePrompts[0]}`, 
-              post.caption, 512, 896
-            );
-            const { videoService } = await import('@/services/video');
-            const result = await videoService.compileShortVideo([imageBase64], script);
-            finalMediaUrl = result.videoDataUri;
-            console.log(`[Cron Stage 1] Video compiled for post ${post.id}. TTS: ${result.ttsStatus}`);
-          } else {
-            console.log(`[Cron Stage 1] Image pipeline for post ${post.id}`);
-            finalMediaUrl = await aiService.generateImage(imageContext, post.caption, 1024, 1024);
-          }
-
-          // Upload to storage
-          let bytes: Buffer;
-          let contentType: string;
-          if (finalMediaUrl.startsWith('data:')) {
-            contentType = finalMediaUrl.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
-            bytes = Buffer.from(finalMediaUrl.split(',')[1], 'base64');
-          } else {
-            const res = await fetch(finalMediaUrl);
-            bytes = Buffer.from(await res.arrayBuffer());
-            contentType = res.headers.get('content-type') || 'image/jpeg';
-          }
-          const ext = contentType.includes('video') ? 'mp4' : 'jpg';
-          const filename = `media_${post.id}_${Date.now()}.${ext}`;
-          
-          const { error: uploadErr } = await supabaseAdmin.storage
-            .from('generated-images')
-            .upload(filename, bytes, { contentType: contentType });
-          
-          if (uploadErr) {
-            throw new Error(`Storage upload failed: ${uploadErr.message}`);
-          }
-          
-          const publicUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
-
-          await supabaseAdmin.from('scheduled_posts').update({
-            image_url: publicUrl,
-            status: 'media_ready'
-          }).eq('id', post.id);
-
-          console.log(`[Cron Stage 1] Media ready for ${post.id}: ${publicUrl.slice(0, 80)}...`);
-          results.push(`${post.id}: media_ready`);
-        } catch (err: any) {
-          console.error(`[Cron Stage 1] Failed for ${post.id}:`, err.message);
-          // Mark as failed after logging the error — don't let it sit forever
-          await supabaseAdmin.from('scheduled_posts').update({ 
-            status: 'failed',
-            error_message: `Media generation failed: ${err.message?.slice(0, 200)}`
-          }).eq('id', post.id);
-          results.push(`${post.id}: failed (${err.message?.slice(0, 50)})`);
+            await supabaseAdmin.from('scheduled_posts').update({ hashtags: updatedHashtags, status: 'image_ready' }).eq('id', post.id);
+            results.push(`${post.id}: image_ready`);
+        } catch (e: any) {
+            console.error(`[Cron Image] Error for ${post.id}:`, e.message);
+            await supabaseAdmin.from('scheduled_posts').update({ status: 'failed', error_message: `Image Gen Failure: ${e.message}` }).eq('id', post.id);
         }
-      }
     }
 
-    // --- STAGE 2: PUBLISHING ---
-    // Fetch posts that have media ready and whose scheduled time has passed
-    const { data: publishPending, error: pubErr } = await supabaseAdmin
+    // ── STAGE 3: AUDIO GENERATION (status: 'image_ready') ──
+    const { data: audioPending } = await supabaseAdmin
+      .from('scheduled_posts')
+      .select('*')
+      .eq('status', 'image_ready')
+      .limit(3);
+
+    for (const post of (audioPending || [])) {
+        try {
+            const rawMeta = post.hashtags?.find((h: string) => h.startsWith('__METADATA__:'));
+            const metadata = rawMeta ? JSON.parse(rawMeta.replace('__METADATA__:', '')) : {};
+            if (!metadata.isVideo) {
+                await supabaseAdmin.from('scheduled_posts').update({ status: 'audio_ready' }).eq('id', post.id);
+                results.push(`${post.id}: audio_ready (skipped)`);
+                continue;
+            }
+
+            // Simple Google TTS Fallback for Cron (fast & reliable)
+            const googleTTS = await import('google-tts-api');
+            const safeScript = metadata.videoScript.script.slice(0, 100);
+            const audioChunks = await googleTTS.getAllAudioBase64(safeScript, { lang: 'en', slow: false, host: 'https://translate.google.com' });
+            const audioBuffer = Buffer.concat(audioChunks.filter(c => c && c.base64).map(c => Buffer.from(c.base64, 'base64')));
+            
+            const filename = `cron_aud_${post.id}_${Date.now()}.mp3`;
+            await supabaseAdmin.storage.from('generated-images').upload(filename, audioBuffer, { contentType: 'audio/mpeg' });
+            metadata.audioUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
+
+            const updatedMeta = `__METADATA__:${JSON.stringify(metadata)}`;
+            const updatedHashtags = (post.hashtags || []).map((h: string) => h.startsWith('__METADATA__:') ? updatedMeta : h);
+            await supabaseAdmin.from('scheduled_posts').update({ hashtags: updatedHashtags, status: 'audio_ready' }).eq('id', post.id);
+            results.push(`${post.id}: audio_ready`);
+        } catch (e: any) {
+            console.error(`[Cron Audio] Error for ${post.id}:`, e.message);
+            await supabaseAdmin.from('scheduled_posts').update({ status: 'failed', error_message: `Audio Gen Failure: ${e.message}` }).eq('id', post.id);
+        }
+    }
+
+    // ── STAGE 4: COMPILATION (status: 'audio_ready') ──
+    const { data: compilePending } = await supabaseAdmin
+      .from('scheduled_posts')
+      .select('*')
+      .eq('status', 'audio_ready')
+      .limit(1); // Compilation is heavy, do 1 at a time in cron
+
+    for (const post of (compilePending || [])) {
+        try {
+            const rawMeta = post.hashtags?.find((h: string) => h.startsWith('__METADATA__:'));
+            const metadata = rawMeta ? JSON.parse(rawMeta.replace('__METADATA__:', '')) : {};
+            
+            let finalUrl = '';
+            if (metadata.isVideo && metadata.audioUrl) {
+                const res = await videoService.compileShortVideoFromAssets([metadata.imageBase64], metadata.audioUrl);
+                const bytes = Buffer.from(res.videoDataUri.split(',')[1], 'base64');
+                const filename = `cron_vid_${post.id}_${Date.now()}.mp4`;
+                await supabaseAdmin.storage.from('generated-images').upload(filename, bytes, { contentType: 'video/mp4' });
+                finalUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
+            } else {
+                const bytes = Buffer.from(metadata.imageBase64.split(',')[1], 'base64');
+                const filename = `cron_img_${post.id}_${Date.now()}.jpg`;
+                await supabaseAdmin.storage.from('generated-images').upload(filename, bytes, { contentType: 'image/jpeg' });
+                finalUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
+            }
+
+            const cleanHashtags = (post.hashtags || []).filter((h: string) => !h.startsWith('__METADATA__:'));
+            await supabaseAdmin.from('scheduled_posts').update({ image_url: finalUrl, hashtags: cleanHashtags, status: 'media_ready' }).eq('id', post.id);
+            results.push(`${post.id}: media_ready`);
+        } catch (e: any) {
+            console.error(`[Cron Compile] Error for ${post.id}:`, e.message);
+            await supabaseAdmin.from('scheduled_posts').update({ status: 'failed', error_message: `Compilation Failure: ${e.message}` }).eq('id', post.id);
+        }
+    }
+
+    // ── STAGE 5: PUBLISHING (status: 'media_ready') ──
+    const { data: publishPending } = await supabaseAdmin
       .from('scheduled_posts')
       .select('*, social_accounts!platform_account_id(*)')
       .eq('status', 'media_ready')
       .lte('scheduled_at', new Date().toISOString())
       .limit(5);
 
-    if (pubErr) {
-      console.error('[Cron Stage 2] Query error:', pubErr.message);
-    }
-
-    if (publishPending && publishPending.length > 0) {
-      console.log(`[Cron Stage 2] Found ${publishPending.length} posts ready to publish.`);
-
-      for (const post of publishPending) {
+    for (const post of (publishPending || [])) {
         try {
-          const account = post.social_accounts;
-          if (!account) {
-            console.error(`[Cron Stage 2] No account for post ${post.id}`);
-            await supabaseAdmin.from('scheduled_posts').update({ status: 'failed', error_message: 'No linked account' }).eq('id', post.id);
-            results.push(`${post.id}: publish_failed (no account)`);
-            continue;
-          }
+            const account = post.social_accounts;
+            if (!account) throw new Error("No account linked");
 
-          console.log(`[Cron Stage 2] Publishing post ${post.id} to ${account.platform}`);
-          
-          let currentAccessToken = account.access_token;
-          
-          // Token refresh
-          try {
-            const isExpired = account.expires_at && new Date(account.expires_at).getTime() < Date.now() + 300000;
-            if (isExpired && account.refresh_token) {
-              if (account.platform === 'youtube') {
-                const { youtubeService } = await import('@/services/social/youtube');
-                const credentials = await youtubeService.refreshAccessToken(account.refresh_token);
-                if (credentials.access_token) {
-                  currentAccessToken = credentials.access_token;
-                  await supabaseAdmin.from('social_accounts').update({
-                    access_token: credentials.access_token,
-                    expires_at: credentials.expiry_date ? new Date(credentials.expiry_date).toISOString() : new Date(Date.now() + 3600 * 1000).toISOString()
-                  }).eq('id', account.id);
-                  console.log(`[Cron Stage 2] YouTube token refreshed for account ${account.id}`);
-                }
-              }
+            let currentAccessToken = account.access_token;
+            // Token Refresh logic (YouTube)
+            if (account.platform === 'youtube' && account.refresh_token && (!account.expires_at || new Date(account.expires_at).getTime() < Date.now() + 300000)) {
+                const creds = await youtubeService.refreshAccessToken(account.refresh_token);
+                currentAccessToken = creds.access_token;
+                await supabaseAdmin.from('social_accounts').update({ access_token: creds.access_token, expires_at: new Date(creds.expiry_date || Date.now() + 3600000).toISOString() }).eq('id', account.id);
             }
-          } catch (refreshErr: any) {
-            console.error(`[Cron Stage 2] Token refresh failed for ${account.id}:`, refreshErr.message);
-          }
 
-          const rawMeta = post.hashtags?.find((h: string) => h.startsWith('__METADATA__:'));
-          const metadata = rawMeta ? JSON.parse(rawMeta.replace('__METADATA__:', '')) : {};
-          const isVideoFromMeta = metadata.isVideo;
-          const cleanHashtags = (post.hashtags || []).filter((h: string) => !h.startsWith('__METADATA__:'));
+            const pubCaption = `${post.hook || ''}\n\n${post.caption}\n\n${post.cta || ''}\n\n${(post.hashtags || []).join(' ')}`.trim();
+            const isVideo = post.image_url?.includes('.mp4');
+            let pubResult: any;
 
-          const isVideo = isVideoFromMeta || account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' ||
-                          post.image_url?.includes('.mp4');
+            if (account.platform === 'facebook') pubResult = await metaService.publishToFacebook(currentAccessToken, account.platform_user_id, { imageUrl: post.image_url, caption: pubCaption, isVideo });
+            else if (account.platform === 'instagram') pubResult = await metaService.publishToInstagram(currentAccessToken, account.platform_user_id, { imageUrl: post.image_url, caption: pubCaption, isVideo });
+            else if (account.platform === 'youtube') pubResult = await youtubeService.publishShort(currentAccessToken, { videoUrl: post.image_url, title: post.hook || 'Short', description: post.caption });
+            else if (account.platform === 'tiktok') pubResult = await tiktokService.publishVideo(currentAccessToken, { videoUrl: post.image_url, caption: post.caption });
 
-          const { metaService } = await import('@/services/social/meta');
-          const { youtubeService } = await import('@/services/social/youtube');
-          const { tiktokService } = await import('@/services/social/tiktok');
-
-          const pubCaption = `${post.hook || ''}\n\n${post.caption}\n\n${post.cta || ''}\n\n${cleanHashtags.join(' ')}`.trim();
-
-          let pubResult: any;
-          if (account.platform === 'facebook') {
-            pubResult = await metaService.publishToFacebook(currentAccessToken, account.platform_user_id, {
-              imageUrl: post.image_url,
-              caption: pubCaption,
-              isVideo: isVideo
-            });
-          } else if (account.platform === 'instagram') {
-            pubResult = await metaService.publishToInstagram(currentAccessToken, account.platform_user_id, {
-              imageUrl: post.image_url,
-              caption: pubCaption,
-              isVideo: isVideo
-            });
-          } else if (account.platform === 'youtube') {
-            pubResult = await youtubeService.publishShort(currentAccessToken, {
-              videoUrl: post.image_url,
-              title: post.hook || 'New Short',
-              description: post.caption
-            });
-          } else if (account.platform === 'tiktok') {
-            pubResult = await tiktokService.publishVideo(currentAccessToken, {
-              videoUrl: post.image_url,
-              caption: post.caption
-            });
-          }
-
-          const postId = pubResult?.id || pubResult?.data?.id;
-          if (postId) {
-            await supabaseAdmin.from('scheduled_posts').update({
-              status: 'published',
-              published_at: new Date().toISOString(),
-              platform_post_id: postId
-            }).eq('id', post.id);
-            console.log(`[Cron Stage 2] Post ${post.id} published! Platform ID: ${postId}`);
-            results.push(`${post.id}: published`);
-          } else {
-            const errorMsg = pubResult?.error?.message || JSON.stringify(pubResult?.error || pubResult || 'No response');
-            throw new Error(errorMsg);
-          }
-        } catch (err: any) {
-          console.error(`[Cron Stage 2] Failed for ${post.id}:`, err.message);
-          await supabaseAdmin.from('scheduled_posts').update({ 
-            status: 'failed',
-            error_message: `Publish failed: ${err.message?.slice(0, 200)}`
-          }).eq('id', post.id);
-          results.push(`${post.id}: publish_failed (${err.message?.slice(0, 50)})`);
+            if (pubResult?.id || pubResult?.data?.id) {
+                await supabaseAdmin.from('scheduled_posts').update({ status: 'published', published_at: new Date().toISOString(), platform_post_id: pubResult.id || pubResult.data.id }).eq('id', post.id);
+                results.push(`${post.id}: published`);
+            } else throw new Error(JSON.stringify(pubResult?.error || pubResult || "Unknown error"));
+        } catch (e: any) {
+            console.error(`[Cron Publish] Error for ${post.id}:`, e.message);
+            await supabaseAdmin.from('scheduled_posts').update({ status: 'failed', error_message: `Publish Failure: ${e.message}` }).eq('id', post.id);
         }
-      }
     }
 
-    if (results.length === 0) {
-      return NextResponse.json({ success: true, message: 'Idle — no pending posts' });
-    }
-
-    return NextResponse.json({ success: true, processed: results });
+    return NextResponse.json({ success: true, results });
   } catch (error: any) {
-    console.error('[Cron] Fatal error:', error.message, error.stack);
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[Cron] Fatal:', error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
