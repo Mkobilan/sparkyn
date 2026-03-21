@@ -138,34 +138,28 @@ export default function Sidebar() {
       </div>
 
       {/* Footer / User - Fixed at bottom */}
-      <div className="mt-auto border-t border-white/5 p-4 shrink-0 bg-black/20 backdrop-blur-md rounded-b-[1.5rem] flex flex-col gap-4">
-        <div className="user-card !m-0">
-          <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center border border-white/10 shrink-0">
-            <User className="w-5 h-5 text-muted-foreground" />
+      <div className="mt-auto border-t border-white/5 p-4 shrink-0 bg-black/40 backdrop-blur-xl rounded-b-[1.5rem] flex flex-col gap-3">
+        <div className="user-card !m-0 !bg-white/5 !border-white/10">
+          <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 shrink-0">
+            <User className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold truncate text-white">{user?.email?.split('@')[0] || 'Creator'}</p>
-            <p className="text-[9px] text-muted-foreground truncate uppercase tracking-widest font-heavy">
+            <p className="text-xs font-black truncate text-white">{user?.email?.split('@')[0] || 'Creator'}</p>
+            <p className="text-[9px] text-primary/70 truncate uppercase tracking-widest font-black">
               {profile?.subscription_tier || 'Free'} Tier
             </p>
           </div>
-          {profile?.subscription_tier === 'free' ? (
-            <Link href="/api/checkout?tier=pro" className="p-1.5 bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors">
-              <Zap className="w-3.5 h-3.5 text-primary animate-pulse" />
-            </Link>
-          ) : (
-            <Zap className="w-3.5 h-3.5 text-primary" />
-          )}
+          <Zap className="w-3.5 h-3.5 text-primary animate-pulse" />
         </div>
 
         <button 
           onClick={handleLogout}
-          className="nav-link w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 border-transparent hover:border-destructive/20 group transition-all"
+          className="flex items-center gap-3 w-full px-5 py-4 bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 hover:border-destructive/40 rounded-xl text-destructive transition-all group shadow-lg"
         >
-          <div className="nav-icon bg-destructive/5 border-destructive/10 group-hover:bg-destructive/20 group-hover:border-destructive/30">
-            <LogOut className="w-[18px] h-[18px] group-hover:-translate-x-0.5 transition-transform" />
+          <div className="shrink-0 p-1 bg-destructive/10 rounded-md group-hover:scale-110 transition-transform">
+            <LogOut className="w-4 h-4" />
           </div>
-          <span className="font-black uppercase tracking-[0.15em] text-[10px]">Sign Out</span>
+          <span className="font-black uppercase tracking-[0.2em] text-[10px]">Sign Out</span>
         </button>
       </div>
     </aside>

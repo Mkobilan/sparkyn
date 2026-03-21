@@ -345,17 +345,23 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 /* Sidebar Bespoke Styles */
 .nav-sidebar {
   width: 260px;
-  height: calc(100vh - 2rem);
-  margin: 1rem;
+  position: fixed;
+  left: 1rem;
+  top: 1rem;
+  bottom: 1rem;
   border-radius: 1.5rem;
   display: flex;
   flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 0;
   z-index: 50;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.custom-scrollbar {
+  overflow-y: scroll; /* Force scrollbar area */
+  scrollbar-width: thin;
+  scrollbar-color: hsla(var(--primary), 0.4) transparent;
 }
 
 .main-content {
