@@ -156,7 +156,24 @@ export async function POST(request: Request) {
     }
 
     if (generatedPosts.length === 0) throw new Error(generationErrors.join(' | '));
-    
+
+    // SELF-TRIGGER: Immediately kick off the cron to process the just-inserted post(s).
+    // Fire-and-forget — we don't await this because the user doesn't need to wait for processing.
+    const cronUrl = `${process.env.VERCEL_PROJECT_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}api/cron/process`;
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      fetch(cronUrl.replace(/\/\//g, '/').replace(':/', '://'), {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${cronSecret}` },
+      }).then(res => {
+        console.log(`[Self-Trigger] Cron response: ${res.status}`);
+      }).catch(err => {
+        console.warn('[Self-Trigger] Cron trigger failed (non-blocking):', err.message);
+      });
+    } else {
+      console.warn('[Self-Trigger] CRON_SECRET not set — cron not triggered. Posts will wait for scheduled cron.');
+    }
+
     const publishLinks = generatedPosts
       .filter(p => p.status === 'published' && p.platform_post_id)
       .map(p => ({ 
