@@ -50,10 +50,12 @@ export default function DashboardLayout({
     )
   }
 
+  if (isUnpaid) {
+    return <PricingModal />
+  }
+
   return (
     <div className="flex min-h-screen bg-background relative">
-      {isUnpaid && <PricingModal />}
-      
       <Sidebar />
       <div className="flex-1">
         <Suspense fallback={
