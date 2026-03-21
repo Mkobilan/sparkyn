@@ -11,7 +11,7 @@ ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 export class VideoService {
     
     async compileShortVideo(imagesBase64: string[], script: string): Promise<string> {
-        console.log("Initializing TikTok FFmpeg compiler...");
+        console.log("Initializing Video FFmpeg compiler...");
         const jobId = Math.random().toString(36).substring(7);
         const tmpDir = os.tmpdir();
         
@@ -23,6 +23,7 @@ export class VideoService {
             // 1. Generate Voiceover via ElevenLabs (High Quality) or Fallback to Google
             const safeScript = script.replace(/[^\x00-\x7F]/g, "").trim() || "Enjoy the video.";
             const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
+            let ttsSucceeded = false;
 
             try {
                 if (elevenLabsKey) {
@@ -51,6 +52,7 @@ export class VideoService {
                     const audioBuffer = await response.arrayBuffer();
                     await fs.writeFile(audioPath, Buffer.from(audioBuffer));
                     console.log("ElevenLabs TTS Success.");
+                    ttsSucceeded = true;
                 } else {
                     // Fallback to Google TTS
                     console.log("No ElevenLabs key found, using Google TTS fallback...");
@@ -64,16 +66,40 @@ export class VideoService {
                     const fullAudioBuffer = Buffer.concat(validChunks.map(c => Buffer.from(c.base64, 'base64')));
                     await fs.writeFile(audioPath, fullAudioBuffer);
                     console.log("Google TTS Success.");
+                    ttsSucceeded = true;
                 }
             } catch (ttsErr: any) {
-                console.warn("TTS Generation failed, creating silent track...", ttsErr.message);
-                const silentBuffer = Buffer.from('SUQzBAAAAAAAAFRTU0UAAAANAAADTGF2ZTU4LjkxLjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'base64');
-                await fs.writeFile(audioPath, silentBuffer);
+                console.warn("TTS Generation failed, will generate silent audio track via FFmpeg...", ttsErr.message);
+                ttsSucceeded = false;
+            }
+
+            // Generate proper silent audio via FFmpeg if TTS failed
+            if (!ttsSucceeded) {
+                console.log("Generating valid silent audio track with FFmpeg...");
+                await new Promise<void>((resolve, reject) => {
+                    ffmpeg()
+                        .input('anullsrc=r=44100:cl=stereo')
+                        .inputFormat('lavfi')
+                        .outputOptions([
+                            '-t', '10',       // 10 seconds of silence
+                            '-c:a', 'libmp3lame',
+                            '-b:a', '128k',
+                            '-ar', '44100',
+                        ])
+                        .save(audioPath)
+                        .on('end', () => {
+                            console.log("Silent audio track generated successfully.");
+                            resolve();
+                        })
+                        .on('error', (err) => {
+                            console.error("Silent audio generation failed:", err);
+                            reject(err);
+                        });
+                });
             }
             
             // 2. Save Images and Build FFmpeg Concat file
             let concatContent = '';
-            // Give each image a long duration (10s) and let -shortest cut it to match the audio
             const SLIDE_DURATION = 10;
             
             for (let i = 0; i < imagesBase64.length; i++) {
@@ -95,38 +121,44 @@ export class VideoService {
             concatContent += `file '${path.join(tmpDir, `img_${jobId}_${imagesBase64.length - 1}.jpg`)}'\n`;
             await fs.writeFile(concatFilePath, concatContent);
 
-            console.log("Executing Vercel FFmpeg UltraFast Render...");
+            console.log("Executing FFmpeg Render...");
             
-            // 3. New Filter Complex Rendering (More robust than concat demuxer)
+            // 3. Filter Complex Rendering with dynamic audio mapping
+            const numImages = imagesBase64.length;
+            const audioInputIndex = numImages; // Audio is the last input, after all images
+            
             const videoFilters = imagesBase64.map((_, i) => 
                 `[${i}:v]format=pix_fmts=yuv420p,setsar=1,scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,loop=loop=150:size=1:start=0[v${i}]`
             );
-            videoFilters.push(`${imagesBase64.map((_, i) => `[v${i}]`).join('')}concat=n=${imagesBase64.length}:v=1:a=0[outv]`);
+            videoFilters.push(`${imagesBase64.map((_, i) => `[v${i}]`).join('')}concat=n=${numImages}:v=1:a=0[outv]`);
 
             await new Promise<void>((resolve, reject) => {
                 const ff = ffmpeg();
-                // Add the 3 image inputs
-                for (let i = 0; i < imagesBase64.length; i++) {
+                // Add image inputs
+                for (let i = 0; i < numImages; i++) {
                     ff.input(path.join(tmpDir, `img_${jobId}_${i}.jpg`));
                 }
                 ff.input(audioPath);
                 
                 ff.outputOptions([
                     '-filter_complex', videoFilters.join(';'),
-                    '-map [outv]',
-                    '-map 3:a', // Map the audio input (the 4th input, index 3)
-                    '-c:v libx264',
-                    '-preset ultrafast',
-                    '-profile:v high',
-                    '-level 4.1',
-                    '-crf 20',
-                    '-pix_fmt yuv420p',
-                    '-r 30',
-                    '-g 60',
-                    '-c:a aac',
-                    '-b:a 128k',
-                    '-movflags +faststart',
-                    '-shortest'
+                    '-map', '[outv]',
+                    `-map`, `${audioInputIndex}:a`,  // Dynamic audio index
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast',
+                    '-profile:v', 'high',
+                    '-level', '4.1',
+                    '-crf', '20',
+                    '-pix_fmt', 'yuv420p',
+                    '-r', '30',
+                    '-g', '60',
+                    '-c:a', 'aac',
+                    '-b:a', '128k',
+                    '-ar', '44100',          // Explicit audio sample rate
+                    '-ac', '2',              // Stereo audio
+                    '-movflags', '+faststart',
+                    '-shortest',
+                    '-t', '60',              // Max 60 seconds to prevent runaway
                 ])
                 .save(outputPath)
                 .on('end', () => resolve())
@@ -136,7 +168,7 @@ export class VideoService {
                 });
             });
 
-            console.log("Render complete! Serializing video for Vercel edge stream...");
+            console.log("Render complete! Serializing video for upload...");
             
             // 4. Return the fully rendered video as Binary Base64
             const videoBuffer = await fs.readFile(outputPath);

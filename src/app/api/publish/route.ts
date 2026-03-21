@@ -54,10 +54,11 @@ export async function POST(request: Request) {
 
       try {
         if (platform === 'facebook') {
+          const isVideoPost = post.image_url?.includes('.mp4') || post.image_url?.startsWith('data:video');
           results[platform] = await metaService.publishToFacebook(
             currentAccessToken, 
             account.platform_user_id, 
-            { imageUrl: post.image_url, caption: post.caption }
+            { imageUrl: post.image_url, caption: post.caption, isVideo: isVideoPost }
           )
         } else if (platform === 'instagram') {
           results[platform] = await metaService.publishToInstagram(

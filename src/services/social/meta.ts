@@ -1,6 +1,6 @@
 export const metaService = {
   /**
-   * Publishes an image post to a Facebook Page
+   * Publishes an image or video post to a Facebook Page
    */
   async publishToFacebook(accessToken: string, pageId: string, params: {
     imageUrl: string;
@@ -8,15 +8,57 @@ export const metaService = {
     base64Image?: string;
     isVideo?: boolean;
   }) {
-    const endpoint = params.isVideo ? 'videos' : 'photos';
-    const url = `https://graph.facebook.com/v19.0/${pageId}/${endpoint}`;
+    // ──────────────────────────────────────────────────────────
+    // VIDEO PATH: Facebook /videos requires multipart/form-data
+    // ──────────────────────────────────────────────────────────
+    if (params.isVideo) {
+      const videoUrl = `https://graph.facebook.com/v19.0/${pageId}/videos`;
+      try {
+        // 1. Get the video bytes (from Supabase URL or data URI)
+        let videoBuffer: Buffer;
+        if (params.imageUrl.startsWith('data:')) {
+          const base64Data = params.imageUrl.split(',')[1];
+          videoBuffer = Buffer.from(base64Data, 'base64');
+        } else {
+          const videoResponse = await fetch(params.imageUrl);
+          if (!videoResponse.ok) throw new Error(`Video download failed: ${videoResponse.status}`);
+          videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+        }
+
+        console.log(`Facebook video upload: ${videoBuffer.length} bytes`);
+
+        // 2. Upload as multipart/form-data binary (required by Graph API /videos)
+        const formData = new FormData();
+        formData.append('access_token', accessToken);
+        formData.append('description', params.caption);
+        const blob = new Blob([new Uint8Array(videoBuffer)], { type: 'video/mp4' });
+        formData.append('source', blob, 'video.mp4');
+
+        const response = await fetch(videoUrl, { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.id && !result.error) return result;
+
+        // If the binary upload failed, log the error for debugging
+        console.error('Facebook video upload error:', JSON.stringify(result));
+        throw new Error(result.error?.message || 'Facebook video upload failed');
+      } catch (err: any) {
+        console.error("Facebook video upload failed:", err.message || err);
+        return { error: { message: err.message || "Video upload failure" } };
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // IMAGE PATH (unchanged)
+    // ──────────────────────────────────────────────────────────
+    const url = `https://graph.facebook.com/v19.0/${pageId}/photos`;
     
     // NUCLEAR BYPASS STRATEGY (Atomic Attachment):
     // Standard photo uploads are being blocked by "Ad-Safety" (Code 324) and "Link Too Long" (Code 100).
     // The "Atomic" way is:
     // 1. Upload photo as UNPUBLISHED to the photo vault.
     // 2. Attach the photo ID to a standard feed post.
-    if (!params.isVideo && params.base64Image) {
+    if (params.base64Image) {
       try {
         const photoFormData = new FormData();
         photoFormData.append('access_token', accessToken);
@@ -58,14 +100,9 @@ export const metaService = {
     try {
       const payload: any = {
         access_token: accessToken,
+        url: params.imageUrl,
+        message: params.caption,
       };
-      if (params.isVideo) {
-        payload.file_url = params.imageUrl;
-        payload.description = params.caption;
-      } else {
-        payload.url = params.imageUrl;
-        payload.message = params.caption;
-      }
 
       const response = await fetch(url, {
         method: 'POST',
@@ -77,9 +114,6 @@ export const metaService = {
       if (result.id && !result.error) return result;
 
       // ATTEMPT 3: THE UNSTOPPABLE STATUS (Resilient-Status Bypass)
-      // If all image-specific endpoints are blocked by Meta (Error 324/100), 
-      // we post a standard status update with the URL in the text.
-      // Facebook's organic link-scraper will then automatically show the image preview.
       if (result.error?.code === 324 || result.error?.error_subcode === 2069019 || result.error?.code === 100) {
         console.warn("Final Image Block detected. Triggering Resilient-Status Bypass...");
         const feedUrl = `https://graph.facebook.com/v19.0/${pageId}/feed`;
@@ -88,7 +122,7 @@ export const metaService = {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             access_token: accessToken,
-            message: `${params.caption}\n\n${params.imageUrl}` // Append URL to trigger scraper
+            message: `${params.caption}\n\n${params.imageUrl}`
           }),
         });
         return await feedResponse.json();
