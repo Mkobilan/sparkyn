@@ -69,7 +69,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="nav-sidebar glass grain flex flex-col h-full overflow-hidden">
+    <aside className="nav-sidebar glass grain flex flex-col overflow-hidden">
       {/* Branding - Fixed at top */}
       <div className="p-7 flex items-center gap-3.5 shrink-0 border-b border-white/5 bg-black/20 backdrop-blur-md rounded-t-[1.5rem]">
         <img src="/sparkyn_logo.jpg" alt="Sparkyn Logo" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: '0.75rem', border: '1px solid hsla(36,95%,55%,0.2)' }} />
@@ -80,7 +80,7 @@ export default function Sidebar() {
       </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4">
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4 min-h-0">
         <nav className="space-y-1">
           <div className="menu-label !pt-2">Main Experience</div>
           {navigation.map((item) => {
@@ -135,23 +135,10 @@ export default function Sidebar() {
             )}
           </Link>
         </nav>
-
-        {/* Action Section */}
-        <div className="mt-8 px-2">
-          <button 
-            onClick={handleLogout}
-            className="nav-link w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 border-transparent hover:border-destructive/20 group transition-all"
-          >
-            <div className="nav-icon bg-destructive/5 border-destructive/10 group-hover:bg-destructive/20 group-hover:border-destructive/30">
-              <LogOut className="w-[18px] h-[18px] group-hover:-translate-x-0.5 transition-transform" />
-            </div>
-            <span className="font-black uppercase tracking-[0.15em] text-[10px]">Sign Out</span>
-          </button>
-        </div>
       </div>
 
       {/* Footer / User - Fixed at bottom */}
-      <div className="mt-auto border-t border-white/5 p-4 shrink-0 bg-black/20 backdrop-blur-md rounded-b-[1.5rem]">
+      <div className="mt-auto border-t border-white/5 p-4 shrink-0 bg-black/20 backdrop-blur-md rounded-b-[1.5rem] flex flex-col gap-4">
         <div className="user-card !m-0">
           <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center border border-white/10 shrink-0">
             <User className="w-5 h-5 text-muted-foreground" />
@@ -170,6 +157,16 @@ export default function Sidebar() {
             <Zap className="w-3.5 h-3.5 text-primary" />
           )}
         </div>
+
+        <button 
+          onClick={handleLogout}
+          className="nav-link w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 border-transparent hover:border-destructive/20 group transition-all"
+        >
+          <div className="nav-icon bg-destructive/5 border-destructive/10 group-hover:bg-destructive/20 group-hover:border-destructive/30">
+            <LogOut className="w-[18px] h-[18px] group-hover:-translate-x-0.5 transition-transform" />
+          </div>
+          <span className="font-black uppercase tracking-[0.15em] text-[10px]">Sign Out</span>
+        </button>
       </div>
     </aside>
   )

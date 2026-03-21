@@ -313,20 +313,21 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  background: hsla(0, 0%, 100%, 0.02);
+  border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: hsla(var(--primary), 0.2);
+  background: hsla(var(--primary), 0.4);
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: hsla(var(--primary), 0.4);
+  background: hsla(var(--primary), 0.6);
 }
 
 /* Responsive */
