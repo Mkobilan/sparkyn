@@ -3,14 +3,18 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import Sidebar from '@/components/Sidebar'
-import { Save, User, Building, Trash2, Bell, AlertCircle, Loader2, Zap, ShieldCheck, Check } from 'lucide-react'
+import { Save, User, Building, Trash2, Bell, AlertCircle, Loader2, Zap, ShieldCheck, Check, X, Info } from 'lucide-react'
 import { getTierLimits, PRICING_TIERS } from '@/lib/pricing'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
   const [profile, setProfile] = useState<any>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -39,6 +43,27 @@ export default function SettingsPage() {
 
     if (error) console.error(error)
     setLoading(false)
+  }
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true)
+    try {
+      const response = await fetch('/api/user/delete', { method: 'POST' })
+      if (response.ok) {
+        // Log out locally and redirect
+        await supabase.auth.signOut()
+        router.push('/')
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error || 'Failed to delete account'}`)
+      }
+    } catch (err) {
+      console.error(err)
+      alert('An unexpected error occurred.')
+    } finally {
+      setDeleting(false)
+      setShowDeleteModal(false)
+    }
   }
 
   if (!profile) return (
@@ -182,11 +207,71 @@ export default function SettingsPage() {
               <h3 className="text-xl font-bold text-destructive font-heading mb-1">Danger Zone</h3>
               <p className="text-sm text-muted-foreground">Permanently delete your account and all AI data.</p>
             </div>
-            <button className="btn btn-ghost text-destructive hover:bg-destructive/10 border border-destructive/10 text-xs font-black uppercase tracking-widest px-6">
+            <button 
+              onClick={() => setShowDeleteModal(true)}
+              className="btn btn-ghost text-destructive hover:bg-destructive/10 border border-destructive/10 text-xs font-black uppercase tracking-widest px-6"
+            >
               <Trash2 className="w-4 h-4 mr-2" /> Delete Account
             </button>
           </div>
+        </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-[10001] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
+            <div className="glass max-w-md w-full rounded-[2rem] border border-destructive/30 overflow-hidden shadow-[0_0_100px_-20px_rgba(239, 68, 68, 0.4)] animate-in zoom-in-95 duration-300">
+              <div className="p-8 border-b border-border/50 bg-destructive/5 flex items-center justify-between">
+                <h2 className="text-xl font-black text-destructive font-heading flex items-center gap-3">
+                  <AlertCircle className="w-6 h-6" /> Terminate Account
+                </h2>
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+              
+              <div className="p-8 space-y-6">
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex gap-3">
+                  <Info className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-black uppercase text-[10px] tracking-widest mb-1">Irreversible Action</p>
+                    <p className="font-medium opacity-90 leading-relaxed">
+                      Deactivating your Sparkyn account will immediately cancel your active subscription and permanently delete all your AI training data, profiles, and history. 
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                   <p className="text-xs font-bold text-white uppercase tracking-widest opacity-60">Confirm with your business name:</p>
+                   <input 
+                     className="input border-destructive/20 focus:border-destructive" 
+                     placeholder={profile.business_name}
+                     autoFocus
+                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-4">
+                  <button 
+                    onClick={() => setShowDeleteModal(false)}
+                    className="btn btn-outline py-4 rounded-xl font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleDeleteAccount}
+                    disabled={deleting}
+                    className="btn bg-destructive text-white hover:bg-destructive/90 py-4 rounded-xl font-black flex items-center justify-center gap-2 shadow-[0_8px_24px_-6px_rgba(239, 68, 68, 0.5)]"
+                  >
+                    {deleting ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Trash2 className="w-4 h-4 text-white" />}
+                    Delete 
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
+        )}
         </div>
     </main>
   )
