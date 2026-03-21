@@ -170,14 +170,19 @@ async function handleCron(request: Request) {
             console.error(`[Cron Stage 2] Token refresh failed for ${account.id}:`, refreshErr.message);
           }
 
-          const isVideo = account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' ||
+          const rawMeta = post.hashtags?.find((h: string) => h.startsWith('__METADATA__:'));
+          const metadata = rawMeta ? JSON.parse(rawMeta.replace('__METADATA__:', '')) : {};
+          const isVideoFromMeta = metadata.isVideo;
+          const cleanHashtags = (post.hashtags || []).filter((h: string) => !h.startsWith('__METADATA__:'));
+
+          const isVideo = isVideoFromMeta || account.platform === 'tiktok' || account.platform === 'instagramreels' || account.platform === 'youtube' ||
                           post.image_url?.includes('.mp4');
 
           const { metaService } = await import('@/services/social/meta');
           const { youtubeService } = await import('@/services/social/youtube');
           const { tiktokService } = await import('@/services/social/tiktok');
 
-          const pubCaption = `${post.hook || ''}\n\n${post.caption}\n\n${post.cta || ''}\n\n${(post.hashtags || []).join(' ')}`.trim();
+          const pubCaption = `${post.hook || ''}\n\n${post.caption}\n\n${post.cta || ''}\n\n${cleanHashtags.join(' ')}`.trim();
 
           let pubResult: any;
           if (account.platform === 'facebook') {

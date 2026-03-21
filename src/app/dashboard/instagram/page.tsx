@@ -18,6 +18,7 @@ import {
   Copy
 } from 'lucide-react'
 import Link from 'next/link'
+import ErrorModal from '@/components/ErrorModal'
 
 export default function InstagramDashboard() {
   const [accounts, setAccounts] = useState<any[]>([])
@@ -26,7 +27,7 @@ export default function InstagramDashboard() {
   const [progressMsg, setProgressMsg] = useState<string | null>(null)
   const [scheduledTimes, setScheduledTimes] = useState<Record<string, string>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [errorModal, setErrorModal] = useState<string | null>(null)
+  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string; details?: any }>({ isOpen: false, message: '' })
   const [editForm, setEditForm] = useState({ business_name: '', industry: '', niche: '', description: '', goal: '' })
   const supabase = createClient()
 
@@ -83,18 +84,22 @@ export default function InstagramDashboard() {
           body: JSON.stringify({ postId })
         })
         if (!pubRes.ok) throw new Error(`[Publish] ${await pubRes.text()}`);
-        alert(`✅ Instagram post published successfully!`)
+        setErrorModal({ isOpen: true, message: '✅ Instagram post published successfully!', details: null })
       } else {
-        alert(`📅 Content generated and scheduled!`)
+        setErrorModal({ isOpen: true, message: '📅 Content generated and scheduled!', details: null })
       }
 
       fetchAccounts()
     } catch (error: any) {
       console.error("Instagram Waterfall Error:", error)
       const isTimeout = error.message?.includes('504') || error.message?.includes('timeout');
-      setErrorModal(isTimeout 
-        ? 'The request timed out. This step took too long—please try again.'
-        : `Instagram Waterfall Failure: ${error.message}`);
+      setErrorModal({ 
+        isOpen: true, 
+        message: isTimeout 
+          ? 'The request timed out. Video generation takes time — try again or schedule it instead.'
+          : `Waterfall Failure: ${error.message}`,
+        details: error
+      });
     } finally {
       setGeneratingId(null)
       setProgressMsg(null)
@@ -162,36 +167,6 @@ export default function InstagramDashboard() {
             <p className="text-muted-foreground text-xs px-4 leading-relaxed">
               Splitting request into stages to prevent timeouts. Please don't close this window.
             </p>
-          </div>
-        </div>
-      )}
-
-      {errorModal && (
-        <div className="fixed inset-0 bg-[#000000]/95 z-[99999] flex items-center justify-center p-4">
-          <div className="bg-[#0f0f0f] border-2 border-red-500 p-8 rounded-[2.5rem] max-w-2xl w-full shadow-[0_0_100px_rgba(239,68,68,0.4)] relative animate-in fade-in zoom-in duration-300">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-extrabold text-red-500 flex items-center gap-3">
-                <div className="p-2 bg-red-500/10 rounded-full"><AlertCircle className="w-5 h-5" /></div>
-                Generation Exception
-              </h3>
-            </div>
-            <div className="bg-red-500/10 p-5 rounded-2xl border border-red-500/20 text-red-200 text-sm max-h-[300px] overflow-y-auto font-mono whitespace-pre-wrap mb-6">
-              {errorModal}
-            </div>
-            <div className="flex gap-4 justify-end">
-              <button 
-                onClick={() => {
-                  navigator.clipboard.writeText(errorModal)
-                  alert('Error snippet copied to clipboard!')
-                }} 
-                className="btn bg-muted hover:bg-muted/80 text-white font-bold gap-2 px-6 py-3 rounded-xl transition-all"
-              >
-                <Copy className="w-4 h-4" /> Copy Trace
-              </button>
-              <button onClick={() => setErrorModal(null)} className="btn bg-red-500 hover:bg-red-500/90 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition-all">
-                Dismiss
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -371,7 +346,13 @@ export default function InstagramDashboard() {
             )}
           </div>
         </div>
-      </main>
+          <ErrorModal 
+          isOpen={errorModal.isOpen} 
+          onClose={() => setErrorModal({ ...errorModal, isOpen: false })}
+          message={errorModal.message}
+          errorDetails={errorModal.details}
+        />
+    </main>
     </div>
   )
 }

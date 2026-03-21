@@ -86,14 +86,16 @@ export async function POST(request: Request) {
           hook: content.hook,
           caption: content.caption,
           cta: content.cta,
-          hashtags: content.hashtags?.split(' ') || [],
+          hashtags: [
+            `__METADATA__:${JSON.stringify({ 
+              videoScript, 
+              imageContext, 
+              isVideo: isVideoRequest 
+            })}`,
+            ...(content.hashtags?.split(' ') || [])
+          ],
           scheduled_at: scheduledTime.toISOString(),
-          status: 'content_ready', 
-          metadata: { 
-            videoScript, 
-            imageContext, 
-            isVideo: isVideoRequest 
-          }
+          status: 'content_ready'
         }).select().single();
 
         if (insertError) throw insertError;

@@ -27,11 +27,17 @@ export async function POST(request: Request) {
 
     if (postError || !post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     if (post.status === 'published') return NextResponse.json({ error: 'Post already published' }, { status: 400 });
-
+    
     const account = (post as any).social_accounts;
     const profile = (post as any).profiles;
-    const metadata = (post as any).metadata || {};
+
+    // 1.5. Parse Fallback Metadata from hashtags
+    const rawMeta = post.hashtags?.find((h: string) => h.startsWith('__METADATA__:'));
+    const metadata = rawMeta ? JSON.parse(rawMeta.replace('__METADATA__:', '')) : {};
     const { isVideo } = metadata;
+    
+    // Clean hashtags for publishing
+    const cleanHashtags = (post.hashtags || []).filter((h: string) => !h.startsWith('__METADATA__:'));
 
     if (!account) return NextResponse.json({ error: 'Social account not found' }, { status: 404 });
 
@@ -58,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Publish
-    const fullCaption = `${post.hook || ''}\n\n${post.caption}\n\n${post.cta || ''}\n\n${(post.hashtags || []).join(' ')}`.trim();
+    const fullCaption = `${post.hook || ''}\n\n${post.caption}\n\n${post.cta || ''}\n\n${cleanHashtags.join(' ')}`.trim();
     let pubResult: any;
     let publishError = null;
 

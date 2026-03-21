@@ -27,7 +27,9 @@ export async function POST(request: Request) {
     if (postError || !post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     if (post.status === 'published') return NextResponse.json({ error: 'Post already published' }, { status: 400 });
 
-    const metadata = (post as any).metadata || {};
+    // 1.5. Parse Fallback Metadata from hashtags
+    const rawMeta = post.hashtags?.find((h: string) => h.startsWith('__METADATA__:'));
+    const metadata = rawMeta ? JSON.parse(rawMeta.replace('__METADATA__:', '')) : {};
     const { videoScript, imageContext, isVideo } = metadata;
 
     if (!imageContext) throw new Error("Post metadata missing (imageContext)");

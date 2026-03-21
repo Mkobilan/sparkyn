@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import ErrorModal from '@/components/ErrorModal'
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
@@ -29,6 +30,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [progressMsg, setProgressMsg] = useState<string | null>(null)
   const [lastResults, setLastResults] = useState<any>(null)
+  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string; details?: any }>({ isOpen: false, message: '' })
   const supabase = createClient()
 
   const fetchDashboardData = async () => {
@@ -84,7 +86,7 @@ export default function DashboardPage() {
       const genData = await genRes.json();
       const posts = genData.posts || [];
       if (posts.length === 0) {
-        alert("No content was generated. Check your connected accounts.");
+        setErrorModal({ isOpen: true, message: "No content was generated. Check your connected accounts." });
         return;
       }
 
@@ -113,9 +115,13 @@ export default function DashboardPage() {
     } catch (error: any) {
       console.error("Main Dashboard Waterfall Error:", error)
       const isTimeout = error.message?.includes('504') || error.message?.includes('timeout');
-      alert(isTimeout 
-        ? 'The request timed out. High traffic on AI models—please try again.'
-        : `Waterfall Failure: ${error.message}`);
+      setErrorModal({ 
+        isOpen: true, 
+        message: isTimeout 
+          ? 'The request timed out. High traffic on AI models—please try again.'
+          : `Waterfall Failure: ${error.message}`,
+        details: error
+      });
     } finally {
       setIsGenerating(false)
       setProgressMsg(null)
@@ -386,6 +392,12 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+        <ErrorModal 
+          isOpen={errorModal.isOpen} 
+          onClose={() => setErrorModal({ ...errorModal, isOpen: false })}
+          message={errorModal.message}
+          errorDetails={errorModal.details}
+        />
     </main>
   )
 }
