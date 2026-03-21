@@ -53,11 +53,23 @@ function SignupContent() {
       setError(error.message)
       setLoading(false)
     } else {
-      // If a tier was selected, we should attempt to mark it as pending
-      // Note: Full profile update might need to happen on the callback or after verification
-      // but we can try to include it in the user metadata for now.
+      // PROACTIVE FALLBACK: Update profile immediately if user is already auto-signed in (email config off)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user && tier) {
+        await supabase
+          .from('profiles')
+          .update({ pending_tier: tier })
+          .eq('id', user.id)
+      }
+      
       setSuccess(true)
       setLoading(false)
+      
+      // If email confirmation is off, user might be redirected by layout immediately
+      // but let's give it a push if needed
+      if (user && tier) {
+        router.push(`/api/checkout?tier=${tier}`)
+      }
     }
   }
 

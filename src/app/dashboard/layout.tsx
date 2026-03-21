@@ -35,14 +35,15 @@ export default function DashboardLayout({
       setProfile(profile)
 
       // PROTECTION LOGIC:
-      // If user is on Free tier but has a pending_tier (they signed up for a plan but hasn't paid),
-      // or if they are just on Free tier and trying to access restricted things (optional),
-      // redirect them to checkout.
-      if (profile?.subscription_tier === 'free' && profile?.pending_tier && profile.pending_tier !== 'free') {
-        // Allow access to settings to maybe change plan? 
-        // For now, let's just force checkout if they have a pending tier.
+      // We check both the DB Profile AND the Auth User Metadata (as a fallback/immediate source)
+      const currentTier = profile?.subscription_tier || 'free'
+      const activePendingTier = profile?.pending_tier || user.user_metadata?.tier
+
+      if (currentTier === 'free' && activePendingTier && activePendingTier !== 'free') {
+        // Redirection logic: Force checkout if they have a pending tier but haven't paid
         if (pathname !== '/dashboard/settings') {
-           router.push(`/api/checkout?tier=${profile.pending_tier}`)
+           console.log(`[Payment Gate] Redirecting to checkout for tier: ${activePendingTier}`)
+           router.replace(`/api/checkout?tier=${activePendingTier}`)
            return
         }
       }
