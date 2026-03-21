@@ -59,6 +59,10 @@ export const PRICING_TIERS = [
 ];
 
 export function getTierLimits(tierId: string | null | undefined) {
-  const tier = PRICING_TIERS.find(t => t.id === tierId) || PRICING_TIERS[0]; // Default to first tier (Basic or Free)
+  if (!tierId) return PRICING_TIERS[0].limits;
+  
+  const normalizedId = tierId.toLowerCase();
+  const tier = PRICING_TIERS.find(t => t.id === normalizedId) || PRICING_TIERS[0]; // Default to first tier (Basic or Free)
   return tier.limits;
 }
+
