@@ -1,11 +1,11 @@
 'use client'
 
 import { PRICING_TIERS } from '@/lib/pricing'
-import { Check, Zap, Sparkles, Building, ChevronRight, Loader2, AlertTriangle } from 'lucide-react'
+import { Check, Zap, Sparkles, Building, ChevronRight, Loader2, AlertTriangle, X } from 'lucide-react'
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-function PricingModalContent() {
+function PricingModalContent({ onClose }: { onClose?: () => void }) {
   const searchParams = useSearchParams()
   const errorMsg = searchParams.get('message')
   const [loadingTier, setLoadingTier] = useState<string | null>(null)
@@ -112,6 +112,26 @@ function PricingModalContent() {
             Select a tier to activate your dashboard. Lock in these introductory rates while they last.
           </p>
         </div>
+
+        {onClose && (
+          <button 
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: '-1rem',
+              right: '0',
+              padding: '0.75rem',
+              borderRadius: '999px',
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'white',
+              cursor: 'pointer',
+              zIndex: 10
+            }}
+          >
+            <X size={20} />
+          </button>
+        )}
 
         {/* Pricing Cards Grid */}
         <div style={{
@@ -278,14 +298,14 @@ function PricingModalContent() {
   )
 }
 
-export default function PricingModal() {
+export default function PricingModal({ onClose }: { onClose?: () => void }) {
   return (
     <Suspense fallback={
        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backgroundColor: '#050505', display: 'flex', alignItems: 'center', justifySelf: 'center' }}>
          <Loader2 size={40} className="animate-spin text-primary" />
        </div>
     }>
-      <PricingModalContent />
+      <PricingModalContent onClose={onClose} />
     </Suspense>
   )
 }

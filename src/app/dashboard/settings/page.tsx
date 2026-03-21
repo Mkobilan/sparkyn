@@ -7,11 +7,13 @@ import { Save, User, Building, Trash2, Bell, AlertCircle, Loader2, Zap, ShieldCh
 import { getTierLimits, PRICING_TIERS } from '@/lib/pricing'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import PricingModal from '@/components/PricingModal'
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const supabase = createClient()
   const router = useRouter()
@@ -201,9 +203,12 @@ export default function SettingsPage() {
                   <p className="font-bold text-white">Need more capacity?</p>
                   <p className="text-xs text-muted-foreground">Upgrade to a higher tier to unlock more daily posts and accounts.</p>
                 </div>
-                <Link href="/api/checkout?tier=pro" className="btn btn-primary px-8 py-3 rounded-xl font-bold gap-2 whitespace-nowrap shadow-[0_8px_20px_-6px_hsla(var(--primary),0.4)]">
+                <button 
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="btn btn-primary px-8 py-3 rounded-xl font-bold gap-2 whitespace-nowrap shadow-[0_8px_20px_-6px_hsla(var(--primary),0.4)]"
+                >
                   Upgrade Plan <Zap className="w-4 h-4 fill-black" />
-                </Link>
+                </button>
               </div>
             )}
           </div>
@@ -283,6 +288,11 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Upgrade Modal */}
+        {showUpgradeModal && (
+          <PricingModal onClose={() => setShowUpgradeModal(false)} />
         )}
         </div>
     </main>
