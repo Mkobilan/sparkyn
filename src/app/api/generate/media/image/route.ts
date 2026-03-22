@@ -54,7 +54,14 @@ export async function POST(request: Request) {
       contentType = mediaDataUri.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
       bytes = Buffer.from(mediaDataUri.split(',')[1], 'base64');
     } else {
-      const res = await fetch(mediaDataUri);
+      let res = await fetch(mediaDataUri);
+      
+      // Retry for Pollinations 500 errors with the default model
+      if (!res.ok && mediaDataUri.includes('pollinations')) {
+         const altUrl = mediaDataUri.replace('&model=turbo', '&model=flux');
+         res = await fetch(altUrl);
+      }
+      
       if (!res.ok) throw new Error(`Image URL source failed with status ${res.status}: ${res.statusText}`);
       bytes = Buffer.from(await res.arrayBuffer());
       contentType = res.headers.get('content-type') || 'image/jpeg';
