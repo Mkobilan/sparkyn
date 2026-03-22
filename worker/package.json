@@ -4,7 +4,8 @@
   "description": "Background worker for Sparkyn video compiling",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "build": "echo 'No build required for this background worker'"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
