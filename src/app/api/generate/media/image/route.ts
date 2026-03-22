@@ -55,8 +55,14 @@ export async function POST(request: Request) {
       bytes = Buffer.from(mediaDataUri.split(',')[1], 'base64');
     } else {
       const res = await fetch(mediaDataUri);
+      if (!res.ok) throw new Error(`Image URL source failed with status ${res.status}: ${res.statusText}`);
       bytes = Buffer.from(await res.arrayBuffer());
       contentType = res.headers.get('content-type') || 'image/jpeg';
+      
+      // Prevent saving HTML pages as JPEG when APIs return 502 gateways
+      if (contentType.includes('text/html')) {
+        throw new Error("Image proxy returned an HTML error page instead of an image buffer.");
+      }
     }
 
     const { supabaseAdmin } = await import('../../../../../lib/supabase-admin');

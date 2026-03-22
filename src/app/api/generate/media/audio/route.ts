@@ -81,14 +81,17 @@ export async function POST(request: Request) {
             console.log(`[Waterfall-Audio] Falling back to Google TTS...`);
             const googleTTS = await import('google-tts-api');
             const ttsText = safeScript.length > 200 ? safeScript.slice(0, 200) : safeScript;
-            const audioChunks = await googleTTS.getAllAudioBase64(ttsText, {
+            
+            // Do NOT use getAllAudioBase64. Concatenating MP3 buffers directly creates malformed 
+            // ID3 streams that completely lock up FFmpeg in the worker.
+            const base64Audio = await googleTTS.getAudioBase64(ttsText, {
                 lang: 'en',
                 slow: false,
                 host: 'https://translate.google.com',
             });
-            const validChunks = audioChunks.filter(c => c && c.base64 && c.base64.length > 10);
-            if (validChunks.length > 0) {
-                audioBuffer = Buffer.concat(validChunks.map(c => Buffer.from(c.base64, 'base64')));
+            
+            if (base64Audio) {
+                audioBuffer = Buffer.from(base64Audio, 'base64');
                 console.log(`[Waterfall-Audio] Google TTS Success: ${audioBuffer.length} bytes`);
             }
         } catch (e) {
