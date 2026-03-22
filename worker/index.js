@@ -56,6 +56,7 @@ app.post('/compile', async (req, res) => {
     const outputPath = path.join(tmpDir, `out_${jobId}.mp4`);
 
     let filesToCleanup = [];
+    global.currentFilesToCleanup = filesToCleanup;
 
     // 1. Fetch Image (Assume it's always a URL from Vercel's earlier step)
     console.log(`[Worker] Step 1: Downloading image...`);
@@ -182,9 +183,6 @@ app.post('/compile', async (req, res) => {
     if (updateError) throw updateError;
 
     console.log(`[Worker] 🎉 Success! Post ${postId} is now media_ready.`);
-    
-    // Cleanup temporary files
-    await Promise.allSettled(filesToCleanup.map(f => fs.unlink(f)));
 
   } catch (error) {
     console.error(`[Worker] Error processing Post ${postId}:`, error);
@@ -197,6 +195,17 @@ app.post('/compile', async (req, res) => {
         error_message: `Worker Failed: ${error.message}`
       })
       .eq('id', postId);
+      
+  } finally {
+        // ALWAYS CLEANUP TEMP FILES EVEN ON ERROR TO PREVENT OUT-OF-SPACE HANGS
+        console.log(`[Worker] Executing disk cleanup...`);
+        try {
+            if (global.currentFilesToCleanup) {
+               await Promise.allSettled(global.currentFilesToCleanup.map(f => fs.unlink(f).catch(() => {})));
+            }
+        } catch (cleanupErr) {
+            console.error(`[Worker] Failed disk cleanup:`, cleanupErr);
+        }
   }
 });
 
