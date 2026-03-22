@@ -1,8 +1,6 @@
-
 import { createClient } from '../../../../../lib/supabase'
 import { supabaseAdmin } from '../../../../../lib/supabase-admin'
 import { videoService } from '../../../../../services/video'
-import { aiService } from '../../../../../services/ai'
 import { NextResponse } from 'next/server'
 
 export const maxDuration = 60; 
@@ -36,58 +34,85 @@ export async function POST(request: Request) {
 
     // ── STEP: FINAL COMPILATION ──
     console.log(`[Waterfall-Compile] Finalizing ${isVideo ? 'VIDEO' : 'IMAGE'} for post ${postId}`);
-    let finalMediaDataUri: string;
 
-    if (isVideo && audioUrl) {
-        const videoResult = await videoService.compileShortVideoFromAssets([imageUrl], audioUrl);
-        finalMediaDataUri = videoResult.videoDataUri;
+    if (isVideo) {
+        // VIDEO COMPILATION: Offload to Dedicated Render Worker
+        const workerUrl = process.env.RENDER_WORKER_URL || 'http://localhost:8080';
+        const secretKey = process.env.API_SECRET_KEY || 'development_secret_key';
+
+        console.log(`[Waterfall-Compile] Triggering async render worker at ${workerUrl}...`);
+        
+        // Fire request to worker and wait for 202 Accepted.
+        // Worker will compile in background and update the DB to 'media_ready'
+        const workerRes = await fetch(`${workerUrl}/compile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                postId,
+                userId: user.id,
+                imageUrl,
+                audioUrl,
+                secretKey
+            })
+        });
+
+        if (!workerRes.ok) {
+            const errBody = await workerRes.text();
+            throw new Error(`Worker HTTP ${workerRes.status}: ${errBody}`);
+        }
+
+        // Return 202 Processing so frontend knows to poll the database
+        return NextResponse.json({ 
+            success: true, 
+            status: 'processing',
+            message: 'Video compilation has started. Please poll for media_ready.' 
+        }, { status: 202 });
+
     } else {
-        finalMediaDataUri = imageUrl; // It's already a URL, so we can pass it to the uploader
+        // IMAGE ONLY: Immediate Upload
+        let finalMediaDataUri = imageUrl;
+
+        console.log("[Waterfall-Compile] Uploading final image...");
+        let bytes: Buffer;
+        let contentType: string;
+
+        if (finalMediaDataUri.startsWith('data:')) {
+          contentType = finalMediaDataUri.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
+          bytes = Buffer.from(finalMediaDataUri.split(',')[1], 'base64');
+        } else {
+          const res = await fetch(finalMediaDataUri);
+          bytes = Buffer.from(await res.arrayBuffer());
+          contentType = res.headers.get('content-type') || 'image/jpeg';
+        }
+
+        let ext = 'jpg';
+        if (contentType.includes('png')) ext = 'png';
+        const filename = `final_${user.id}_${Date.now()}.${ext}`;
+
+        const { error: uploadErr } = await supabaseAdmin.storage
+          .from('generated-images')
+          .upload(filename, bytes, { contentType });
+        
+        if (uploadErr) throw new Error(`Storage upload failed: ${uploadErr.message}`);
+        const finalUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
+
+        // Strip metadata from hashtags on final stage
+        const cleanHashtags = (post.hashtags || []).filter((h: string) => !h.startsWith('__METADATA__:'));
+
+        const { error: updateError } = await supabase
+          .from('scheduled_posts')
+          .update({
+            image_url: finalUrl,
+            hashtags: cleanHashtags.length > 0 ? cleanHashtags : null,
+            status: 'media_ready',
+            error_message: null
+          })
+          .eq('id', postId);
+
+        if (updateError) throw updateError;
+
+        return NextResponse.json({ success: true, mediaUrl: finalUrl, status: 'media_ready' });
     }
-
-    // ── UPLOAD TO STORAGE ──
-    console.log("[Waterfall-Compile] Uploading final media...");
-    let bytes: Buffer;
-    let contentType: string;
-
-    if (finalMediaDataUri.startsWith('data:')) {
-      contentType = finalMediaDataUri.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
-      bytes = Buffer.from(finalMediaDataUri.split(',')[1], 'base64');
-    } else {
-      const res = await fetch(finalMediaDataUri);
-      bytes = Buffer.from(await res.arrayBuffer());
-      contentType = res.headers.get('content-type') || 'image/jpeg';
-    }
-
-    let ext = 'jpg';
-    if (contentType.includes('video')) ext = 'mp4';
-    else if (contentType.includes('png')) ext = 'png';
-    const filename = `final_${user.id}_${Date.now()}.${ext}`;
-
-    const { error: uploadErr } = await supabaseAdmin.storage
-      .from('generated-images')
-      .upload(filename, bytes, { contentType });
-    
-    if (uploadErr) throw new Error(`Storage upload failed: ${uploadErr.message}`);
-    const finalUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
-
-    // ── UPDATE DB ──
-    // Strip metadata from hashtags on final stage
-    const cleanHashtags = (post.hashtags || []).filter((h: string) => !h.startsWith('__METADATA__:'));
-
-    const { error: updateError } = await supabase
-      .from('scheduled_posts')
-      .update({
-        image_url: finalUrl,
-        hashtags: cleanHashtags,
-        status: 'media_ready',
-        error_message: null
-      })
-      .eq('id', postId);
-
-    if (updateError) throw updateError;
-
-    return NextResponse.json({ success: true, mediaUrl: finalUrl, status: 'media_ready' });
 
   } catch (error: any) {
     console.error('[Waterfall-Compile] Error:', error);

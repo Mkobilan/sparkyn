@@ -95,6 +95,21 @@ export default function TikTokDashboard() {
       })
       if (!compileRes.ok) throw new Error(`[Compilation] ${await compileRes.text()}`);
       
+      const compileData = await compileRes.json();
+      if (compileData.status === 'processing') {
+         setProgressMsg("Step 4/5: Compiling Final Video... (This can take up to 60s)")
+         let isReady = false;
+         while (!isReady) {
+            await new Promise(r => setTimeout(r, 4000));
+            const { data } = await supabase.from('scheduled_posts').select('status, error_message').eq('id', postId).single();
+            if (data?.status === 'media_ready') {
+               isReady = true;
+            } else if (data?.status === 'failed') {
+               throw new Error(`Worker Compilation Failed: ${data?.error_message}`);
+            }
+         }
+      }
+      
       // ── WATERFALL STEP 5: PUBLISH NOW (IF REQUESTED) ──
       if (publishNow) {
         setProgressMsg("Step 5/5: Posting live to TikTok...")
