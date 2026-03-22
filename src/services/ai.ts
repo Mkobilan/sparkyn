@@ -57,7 +57,7 @@ export const aiService = {
         });
         const result = await Promise.race([
           model.generateContent(prompt),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Gemini timeout (4s)")), 4000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Gemini timeout (7s)")), 7000))
         ]) as any;
         return JSON.parse(result.response.text());
       } catch (e: any) {
@@ -80,7 +80,7 @@ export const aiService = {
       console.warn("Gemini Failed/Timed out, attempting fast Cloudflare Llama-3 fallback...", e.message);
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s strict fallback
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2.0s strict fallback
         const cfRes = await fetch(`${CLOUDFLARE_URL}@cf/meta/llama-3-8b-instruct`, {
             method: 'POST',
             ...CLOUDFLARE_AUTH,
@@ -106,9 +106,11 @@ export const aiService = {
         }
       } catch (cfErr: any) {
          console.error("Cloudflare LLM also failed/timed out:", cfErr.message);
+         // Strip URLs out of the raw description so Facebook's image upload doesn't trigger Ad-Safety block 100
+         const safeDescription = params.description.replace(/https?:\/\/[^\s]+/g, '').substring(0, 250);
          return {
             hook: "Discover " + params.businessName,
-            caption: params.description,
+            caption: safeDescription + (safeDescription.length >= 250 ? '...' : ''),
             cta: "Check it out now!",
             hashtags: "#growth"
          };
