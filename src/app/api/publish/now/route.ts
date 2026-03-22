@@ -47,7 +47,10 @@ export async function POST(request: Request) {
     // 1.5. Parse Fallback Metadata from hashtags
     const rawMeta = post.hashtags?.find((h: string) => h.startsWith('__METADATA__:'));
     const metadata = rawMeta ? JSON.parse(rawMeta.replace('__METADATA__:', '')) : {};
-    const { isVideo } = metadata;
+    
+    // Explicit dynamic inference! Because the compiling worker cleans up the database metadata,
+    // we logically determine if the asset is a video strictly by analyzing the final URL extension.
+    const isVideo = post.image_url?.includes('.mp4') || metadata.isVideo;
     
     // Clean hashtags for publishing
     const cleanHashtags = (post.hashtags || []).filter((h: string) => !h.startsWith('__METADATA__:'));
