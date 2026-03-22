@@ -45,43 +45,28 @@ export async function POST(request: Request) {
       isVideo ? 896 : 1024
     );
 
-    // ── UPLOAD TO STORAGE IMMEDIATELY ──
-    // This prevents base64 corruption in Postgres metadata columns
-    console.log(`[Waterfall-Image] Uploading intermediate image to storage...`);
-    let bytes: Buffer;
-    let contentType: string;
+    // ── UPLOAD TO STORAGE IMMEDIATELY (ONLY FOR BASE64) ──
+    // This prevents 500KB base64 string corruption in Postgres metadata columns
+    let imageUrl = mediaDataUri;
+    
     if (mediaDataUri.startsWith('data:')) {
-      contentType = mediaDataUri.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
-      bytes = Buffer.from(mediaDataUri.split(',')[1], 'base64');
+      console.log(`[Waterfall-Image] Uploading intermediate base64 image to storage...`);
+      const contentType = mediaDataUri.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
+      const bytes = Buffer.from(mediaDataUri.split(',')[1], 'base64');
+      
+      const { supabaseAdmin } = await import('../../../../../lib/supabase-admin');
+      const ext = contentType.includes('png') ? 'png' : 'jpg';
+      const filename = `inter_${user.id}_${Date.now()}.${ext}`;
+      
+      const { error: uploadErr } = await supabaseAdmin.storage
+        .from('generated-images')
+        .upload(filename, bytes, { contentType });
+      
+      if (uploadErr) throw new Error(`Intermediate storage upload failed: ${uploadErr.message}`);
+      imageUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
     } else {
-      let res = await fetch(mediaDataUri);
-      
-      // Retry for Pollinations 500 errors with the default model
-      if (!res.ok && mediaDataUri.includes('pollinations')) {
-         const altUrl = mediaDataUri.replace('&model=turbo', '&model=flux');
-         res = await fetch(altUrl);
-      }
-      
-      if (!res.ok) throw new Error(`Image URL source failed with status ${res.status}: ${res.statusText}`);
-      bytes = Buffer.from(await res.arrayBuffer());
-      contentType = res.headers.get('content-type') || 'image/jpeg';
-      
-      // Prevent saving HTML pages as JPEG when APIs return 502 gateways
-      if (contentType.includes('text/html')) {
-        throw new Error("Image proxy returned an HTML error page instead of an image buffer.");
-      }
+      console.log(`[Waterfall-Image] Skipping intermediate storage upload for URL. Passing directly to compile step.`);
     }
-
-    const { supabaseAdmin } = await import('../../../../../lib/supabase-admin');
-    const ext = contentType.includes('png') ? 'png' : 'jpg';
-    const filename = `inter_${user.id}_${Date.now()}.${ext}`;
-    
-    const { error: uploadErr } = await supabaseAdmin.storage
-      .from('generated-images')
-      .upload(filename, bytes, { contentType });
-    
-    if (uploadErr) throw new Error(`Intermediate storage upload failed: ${uploadErr.message}`);
-    const imageUrl = supabaseAdmin.storage.from('generated-images').getPublicUrl(filename).data.publicUrl;
 
     // ── UPDATE METADATA ──
     delete metadata.imageBase64; // Cleanup old junk if any
