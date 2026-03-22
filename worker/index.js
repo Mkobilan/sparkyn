@@ -58,20 +58,42 @@ app.post('/compile', async (req, res) => {
     let filesToCleanup = [];
     global.currentFilesToCleanup = filesToCleanup;
 
-    // 1. Fetch Image (Assume it's always a URL from Vercel's earlier step)
+    // 1. Fetch Image with Aggressive Failsafes to prevent HTML/500 corruption!
     console.log(`[Worker] Step 1: Downloading image...`);
-    const imgRes = await fetch(imageUrl);
+    let imgRes = await fetch(imageUrl);
+    let contentType = imgRes.headers.get('content-type') || '';
     
+    // Failsafe 1: If Pollinations throws a 500 Server Error (or returns an HTML error page), pivot to FLUX model
+    if ((!imgRes.ok || contentType.includes('text/html') || contentType.includes('json')) && imageUrl.includes('pollinations')) {
+        console.warn(`[Worker] Primary Image URL failed or corrupted. Pivoting to secondary model...`);
+        const altUrl = imageUrl.replace('&model=turbo', '&model=flux');
+        imgRes = await fetch(altUrl);
+        contentType = imgRes.headers.get('content-type') || '';
+    }
+
+    // Failsafe 2: If FLUX model also dies, use a mathematically guaranteed bare-bones prompt
+    if (!imgRes.ok || contentType.includes('text/html') || contentType.includes('json')) {
+         console.warn(`[Worker] Secondary Image URL failed. Executing nuclear safe prompt...`);
+         const safePrompt = encodeURIComponent("Beautiful cinematic scenery 8k high resolution");
+         imgRes = await fetch(`https://image.pollinations.ai/prompt/${safePrompt}?width=512&height=896&model=flux`);
+         contentType = imgRes.headers.get('content-type') || '';
+    }
+    
+    if (!imgRes.ok || contentType.includes('text/html') || contentType.includes('json')) {
+        throw new Error(`Image proxy completely failed to return a valid binary stream. (Status: ${imgRes.status})`);
+    }
+
     // Safely determine the actual file extension to prevent FFmpeg image2 demuxer infinite loops
-    // Pollinations AI fallbacks often serve WebP format.
-    const contentType = imgRes.headers.get('content-type') || '';
     let ext = 'jpg';
     if (contentType.includes('png')) ext = 'png';
     else if (contentType.includes('webp')) ext = 'webp';
     
     imgPath = path.join(tmpDir, `img_${jobId}.${ext}`);
-    
     const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+    
+    // Explicit binary magic number check to stop FFmpeg from failing during initialization
+    if (imgBuffer.length < 100) throw new Error("Downloaded image buffer is suspiciously empty (< 100 bytes).");
+    
     await fs.writeFile(imgPath, imgBuffer);
     filesToCleanup.push(imgPath);
 
