@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     for (let attempts = 0; attempts < 3; attempts++) {
       const result = await supabase
         .from('scheduled_posts')
-        .select('*, social_accounts(*), profiles(*)')
+        .select('*, social_accounts(*)')
         .eq('id', postId)
         .eq('user_id', user.id)
         .single();

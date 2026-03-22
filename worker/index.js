@@ -88,28 +88,51 @@ app.post('/compile', async (req, res) => {
     // 3. Render Video via FFmpeg
     console.log(`[Worker] Step 3: Compiling video with FFmpeg...`);
     await new Promise((resolve, reject) => {
+      let isDone = false;
+      const timeoutId = setTimeout(() => {
+        if (!isDone) {
+          isDone = true;
+          reject(new Error("FFmpeg compilation timed out after 120 seconds. Memory or CPU constraint hit."));
+        }
+      }, 120000);
+
       ffmpeg()
-        .input(imgPath).inputOptions('-loop', '1') // Treat image as video stream
+        .input(imgPath).inputOptions(['-loop', '1', '-t', '15']) // Force input to exactly 15s
         .input(audioPath)
         .outputOptions([
-          '-c:v libx264',
-          '-preset ultrafast', // optimize for speed
-          '-tune stillimage',
-          '-crf 28',           // lower quality/smaller size for speed
-          '-pix_fmt yuv420p',
-          '-r 30',
-          '-c:a aac',
-          '-b:a 96k',
-          '-movflags +faststart',
+          '-c:v', 'libx264',
+          '-preset', 'ultrafast',
+          '-tune', 'stillimage',
+          '-crf', '28',
+          '-pix_fmt', 'yuv420p',
+          '-r', '30',
+          '-c:a', 'aac',
+          '-b:a', '96k',
+          '-movflags', '+faststart',
           '-shortest',
-          '-t 15',             // Ensure exactly 15s length (Shorts standard)
+          '-t', '15',
           '-filter_complex', '[0:v]format=yuv420p,scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,setsar=1[outv]',
           '-map', '[outv]',
           '-map', '1:a'
         ])
         .save(outputPath)
-        .on('end', () => resolve())
-        .on('error', (err) => reject(new Error(`FFmpeg error: ${err.message}`)));
+        .on('start', (cmd) => {
+          console.log(`[Worker] FFmpeg spawned with command: ${cmd}`);
+        })
+        .on('end', () => {
+          if (!isDone) {
+            isDone = true;
+            clearTimeout(timeoutId);
+            resolve();
+          }
+        })
+        .on('error', (err) => {
+          if (!isDone) {
+            isDone = true;
+            clearTimeout(timeoutId);
+            reject(new Error(`FFmpeg error: ${err.message}`));
+          }
+        });
     });
     filesToCleanup.push(outputPath);
 
