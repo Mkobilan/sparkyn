@@ -121,7 +121,9 @@ export const aiService = {
   async generateShortVideoScript(description: string, content: string): Promise<{ script: string, imagePrompts: string[] }> {
     try {
       console.log("Generating TikTok short video script via Gemini 1.5-Flash...");
-      const prompt = `Write a viral 15-second TikTok video script for: ${description}. Theme: ${content}. 
+      const entropySeed = Math.floor(Math.random() * 10000000);
+      const prompt = `Write a completely UNIQUE, previously unseen viral 15-second TikTok video script for: ${description}. Theme: ${content}. 
+      (Entropy Seed: ${entropySeed} - You MUST generate a fundamentally distinct script from any previous request.)
       Return JSON EXACTLY in this format, with 3 distinct scenes: 
       { 
         "script": "The full spoken voiceover script. Must be 3 sentences and UNDER 45 WORDS TOTAL to fit 15 seconds.",
@@ -222,7 +224,8 @@ export const aiService = {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8500);
 
-      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-1-schnell`, {
+      // SDXL-Lightning natively runs in 1-2 seconds, bypassing all Vercel timeout constraints entirely!
+      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/bytedance/sdxl-lightning-4step`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -230,9 +233,7 @@ export const aiService = {
         },
         signal: controller.signal,
         body: JSON.stringify({ 
-          prompt: imagePrompt,
-          width: width,
-          height: height
+          prompt: imagePrompt
         })
       });
 
