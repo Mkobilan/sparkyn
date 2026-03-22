@@ -86,15 +86,15 @@ app.post('/compile', async (req, res) => {
     }
 
     // 3. Render Video via FFmpeg
-    console.log(`[Worker] Step 3: Compiling video with FFmpeg...`);
+    console.log(`[Worker] Step 3: Compiling video with FFmpeg... (This may take up to 5 minutes on Free Tier)`);
     await new Promise((resolve, reject) => {
       let isDone = false;
       const timeoutId = setTimeout(() => {
         if (!isDone) {
           isDone = true;
-          reject(new Error("FFmpeg compilation timed out after 120 seconds. Memory or CPU constraint hit."));
+          reject(new Error("FFmpeg compilation timed out after 5 minutes. CPU constraint hit on Render Free Tier."));
         }
-      }, 120000);
+      }, 300000); // 5 minutes
 
       ffmpeg()
         .input(imgPath).inputOptions(['-loop', '1', '-t', '15']) // Force input to exactly 15s
@@ -117,7 +117,12 @@ app.post('/compile', async (req, res) => {
         ])
         .save(outputPath)
         .on('start', (cmd) => {
-          console.log(`[Worker] FFmpeg spawned with command: ${cmd}`);
+          console.log(`[Worker] FFmpeg spawned internally.`);
+        })
+        .on('progress', (progress) => {
+           if (progress.percent) {
+              console.log(`[Worker] FFmpeg Progress: ${Math.floor(progress.percent)}%`);
+           }
         })
         .on('end', () => {
           if (!isDone) {

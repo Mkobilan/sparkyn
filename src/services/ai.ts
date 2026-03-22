@@ -55,12 +55,15 @@ export const aiService = {
             responseMimeType: "application/json",
           }
         });
-        const result = await model.generateContent(prompt);
+        const result = await Promise.race([
+          model.generateContent(prompt),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Gemini timeout (4s)")), 4000))
+        ]) as any;
         return JSON.parse(result.response.text());
       } catch (e: any) {
         if (e.message?.includes('429')) {
-           console.log("Rate limited (429). Retrying in 2 seconds...");
-           await new Promise(r => setTimeout(r, 2000));
+           console.log("Rate limited (429). Retrying in 1 second...");
+           await new Promise(r => setTimeout(r, 1000));
            const model = genAI.getGenerativeModel({ model: modelName });
            const result = await model.generateContent(prompt);
            let t = result.response.text().trim();
@@ -72,14 +75,16 @@ export const aiService = {
     }
 
     try {
-      // Use -latest suffix which is more consistent for v1beta endpoints
       return await tryGenerate("gemini-1.5-flash-latest");
     } catch (e: any) {
-      console.warn("Gemini Failed, attempting Cloudflare Llama-3 fallback...", e.message);
+      console.warn("Gemini Failed/Timed out, attempting fast Cloudflare Llama-3 fallback...", e.message);
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s strict fallback
         const cfRes = await fetch(`${CLOUDFLARE_URL}@cf/meta/llama-3-8b-instruct`, {
             method: 'POST',
             ...CLOUDFLARE_AUTH,
+            signal: controller.signal,
             body: JSON.stringify({
                 messages: [
                     { role: 'system', content: 'You are a social media expert. Return ONLY valid JSON.' },
@@ -87,27 +92,20 @@ export const aiService = {
                 ]
             })
         });
+        clearTimeout(timeoutId);
         const cfData = await cfRes.json();
         const text = cfData.result.response || cfData.result || "";
         
-        // Ultra-aggressive JSON extraction for conversational LLMs
         const match = text.match(/\{[\s\S]*\}/);
         const jsonStr = match ? match[0] : text;
         
         try {
           return JSON.parse(jsonStr);
         } catch (parseErr: any) {
-          console.error("Llama-3 JSON parse failure, fallback to safe defaults:", parseErr?.message || parseErr);
-          return {
-            hook: "🚀 Boost your presence with " + params.businessName,
-            caption: params.description + "\n\nFollow us for more updates!",
-            cta: "Click the link in our bio to learn more!",
-            hashtags: "#" + params.businessName.replace(/\s+/g, '') + " #SocialGrowth #Business"
-          };
+          throw new Error("Llama parse error");
         }
       } catch (cfErr: any) {
-         console.error("Cloudflare also failed:", cfErr.message);
-         // Final safety net: even if everything fails, return SOMETHING useful
+         console.error("Cloudflare LLM also failed/timed out:", cfErr.message);
          return {
             hook: "Discover " + params.businessName,
             caption: params.description,
@@ -133,7 +131,10 @@ export const aiService = {
       }`;
       
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-      const result = await model.generateContent(prompt);
+      const result = await Promise.race([
+        model.generateContent(prompt),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Gemini script timeout (4.5s)")), 4500))
+      ]) as any;
       const text = result.response.text();
       
       const match = text.match(/\{[\s\S]*\}/);
@@ -142,7 +143,7 @@ export const aiService = {
       return JSON.parse(match[0]);
 
     } catch (error: any) {
-      console.warn("Gemini script generation failed, falling back to Cloudflare Llama-3...", error.message);
+      console.warn("Gemini script generation failed/timed out, falling back to Llama-3...", error.message);
       try {
         const prompt = `Write a viral 15-second TikTok video script for: ${description}. Theme: ${content}. 
         Return JSON EXACTLY in this format, with 3 distinct scenes: 
@@ -155,9 +156,13 @@ export const aiService = {
           ] 
         }`;
         
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        
         const cfRes = await fetch(`${CLOUDFLARE_URL}@cf/meta/llama-3-8b-instruct`, {
             method: 'POST',
             ...CLOUDFLARE_AUTH,
+            signal: controller.signal,
             body: JSON.stringify({
                 messages: [
                     { role: 'system', content: 'You are a social media script expert. Return ONLY valid JSON.' },
@@ -165,6 +170,7 @@ export const aiService = {
                 ]
             })
         });
+        clearTimeout(timeoutId);
         const cfData = await cfRes.json();
         const text = cfData.result.response || cfData.result || "";
         const match = text.match(/\{[\s\S]*\}/);
@@ -173,18 +179,10 @@ export const aiService = {
         try {
           return JSON.parse(jsonStr);
         } catch (parseErr: any) {
-          console.error("Llama-3 script JSON parse failure:", parseErr.message);
-          return {
-              script: `Welcome to our page! Check out our amazing content related to ${description}.`,
-              imagePrompts: [
-                `Cinematic professional photography for ${description}`,
-                `Engaging background for ${description}`,
-                `High quality aesthetic for ${description}`
-              ]
-          };
+          throw new Error("Llama parse error");
         }
       } catch (cfErr: any) {
-        console.error("Cloudflare script also failed:", cfErr.message);
+        console.error("Cloudflare script also failed/timed out:", cfErr.message);
         return {
             script: `Welcome to our page! Check out our amazing content related to ${description}. We guarantee you will love it!`,
             imagePrompts: [
