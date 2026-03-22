@@ -49,69 +49,35 @@ export const metaService = {
     }
 
     // ──────────────────────────────────────────────────────────
-    // IMAGE PATH (unchanged)
+    // IMAGE PATH: Direct Binary Upload
     // ──────────────────────────────────────────────────────────
     const url = `https://graph.facebook.com/v19.0/${pageId}/photos`;
     
-    // NUCLEAR BYPASS STRATEGY (Atomic Attachment):
-    // Standard photo uploads are being blocked by "Ad-Safety" (Code 324) and "Link Too Long" (Code 100).
-    // The "Atomic" way is:
-    // 1. Upload photo as UNPUBLISHED to the photo vault.
-    // 2. Attach the photo ID to a standard feed post.
-    if (params.base64Image) {
-      try {
-        const photoFormData = new FormData();
-        photoFormData.append('access_token', accessToken);
-        photoFormData.append('published', 'false'); // Bypasses most ad-safety filters
-        
-        const buffer = Buffer.from(params.base64Image, 'base64');
-        const blob = new Blob([buffer], { type: 'image/jpeg' });
-        photoFormData.append('source', blob, 'image.jpg');
-
-        const photoRes = await fetch(url, { method: 'POST', body: photoFormData });
-        const photoData = await photoRes.json();
-
-        if (photoData.id) {
-          const feedUrl = `https://graph.facebook.com/v19.0/${pageId}/feed`;
-          const feedRes = await fetch(feedUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              access_token: accessToken,
-              message: params.caption,
-              attached_media: [{ media_fbid: photoData.id }]
-            })
-          });
-          const feedData = await feedRes.json();
-          if (feedData.id && !feedData.error) return feedData;
-          
-          if (feedData.error?.code === 324 || feedData.error?.error_subcode === 2069019) {
-            console.warn("Atomic attachment blocked by Ad-Safety. Pivoting to Resilient-Status fallback...");
-          } else {
-            return feedData;
-          }
-        }
-      } catch (err) {
-        console.error("Atomic Bypass failed:", err);
-      }
-    }
-
-    // Attempt 2: URL-based Scraper Upload
     try {
-      const payload: any = {
-        access_token: accessToken,
-        url: params.imageUrl,
-        message: params.caption,
-      };
+      // 1. Download the image directly to bypass Facebook's URL Scraper bot entirely
+      let imgBuffer: Buffer;
+      if (params.imageUrl.startsWith('data:')) {
+        const base64Data = params.imageUrl.split(',')[1];
+        imgBuffer = Buffer.from(base64Data, 'base64');
+      } else {
+        const imgResponse = await fetch(params.imageUrl);
+        if (!imgResponse.ok) throw new Error(`Fallback Image download failed: ${imgResponse.status}`);
+        imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+      }
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      // 2. Upload as multipart/form-data binary
+      const photoFormData = new FormData();
+      photoFormData.append('access_token', accessToken);
+      photoFormData.append('message', params.caption);
+      
+      const blob = new Blob([new Uint8Array(imgBuffer)], { type: 'image/jpeg' });
+      photoFormData.append('source', blob, 'image.jpg');
 
+      const response = await fetch(url, { method: 'POST', body: photoFormData });
       const result = await response.json();
+
       if (result.id && !result.error) return result;
+
 
       // ATTEMPT 3: THE UNSTOPPABLE STATUS (Resilient-Status Bypass)
       if (result.error?.code === 324 || result.error?.error_subcode === 2069019 || result.error?.code === 100) {
