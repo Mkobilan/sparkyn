@@ -104,21 +104,25 @@ app.post('/compile', async (req, res) => {
           '-c:v', 'libx264',
           '-preset', 'ultrafast',
           '-tune', 'stillimage',
-          '-crf', '32',     // Higher compression for speed
+          '-crf', '32',
           '-pix_fmt', 'yuv420p',
-          '-r', '15',       // 15 FPS (dramatically reduces CPU load by 50% compared to 30 FPS)
+          '-r', '2',       // 2 FPS: Static images don't need high framerates. Reduces load by 15x!
           '-c:a', 'aac',
           '-b:a', '96k',
           '-movflags', '+faststart',
           '-shortest',
           '-t', '15',
-          '-filter_complex', '[0:v]format=yuv420p,scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,setsar=1[outv]',
-          '-map', '[outv]',
-          '-map', '1:a'
+          // Scaling removed: the base image is already 512x896 natively
         ])
         .save(outputPath)
         .on('start', (cmd) => {
-          console.log(`[Worker] FFmpeg spawned internally. Optimizing for 15 FPS.`);
+          console.log(`[Worker] FFmpeg spawned perfectly. Optimizing encode to 2 FPS.`);
+        })
+        .on('stderr', (stderrLine) => {
+           // Provide debug visibility if it hangs
+           if (!stderrLine.includes("frame=") && stderrLine.length > 5) {
+               console.log(`[FFmpeg] ${stderrLine}`);
+           }
         })
         .on('progress', (progress) => {
            if (progress.percent) {
