@@ -17,15 +17,28 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // 1. Fetch Post, Account, and Profile
-    const { data: post, error: postError } = await supabase
-      .from('scheduled_posts')
-      .select('*, social_accounts(*), profiles(*)')
-      .eq('id', postId)
-      .eq('user_id', user.id)
-      .single();
+    // 1. Fetch Post, Account, and Profile - with a retry in case of read locks
+    let post, postError;
+    for (let attempts = 0; attempts < 3; attempts++) {
+      const result = await supabase
+        .from('scheduled_posts')
+        .select('*, social_accounts(*), profiles(*)')
+        .eq('id', postId)
+        .eq('user_id', user.id)
+        .single();
+      post = result.data;
+      postError = result.error;
+      
+      if (post && !postError) break;
+      await new Promise(r => setTimeout(r, 1000));
+    }
 
-    if (postError || !post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    if (postError || !post) {
+      console.error(`[PublishNow] Cannot find post. PostId: ${postId}, UserId: ${user.id}. Error:`, postError);
+      return NextResponse.json({ 
+        error: `Post not found. Db issue: ${postError?.message || 'No rows returned.'}` 
+      }, { status: 404 });
+    }
     if (post.status === 'published') return NextResponse.json({ error: 'Post already published' }, { status: 400 });
     
     const account = (post as any).social_accounts;

@@ -209,7 +209,6 @@ export const aiService = {
     try {
       console.log(`Requesting Cloudflare Edge FLUX.1 AI image (${width}x${height}) for:`, scrubbedDesc);
       
-      // Inject safety keywords for Wellness/Business prompts to bypass Meta's automated "Ad-Safety" rejectors (Error 324)
       const qualityKeywords = "Breathtaking vertical 9:16 photography, hyper-realistic, award-winning 8k, cinematic lighting, perfect anatomy, ultra-detailed, depth of field, professional color grading, sharp focus.";
       const safetyKeywords = "Organic lifestyle, natural lighting, no before/after, no medical icons, no claims, people enjoying life.";
       const imagePrompt = `${qualityKeywords} for: ${scrubbedDesc}. Context: ${content}. ${safetyKeywords} STRICTLY NO TEXT OR LOGOS ON IMAGE.`;
@@ -218,13 +217,17 @@ export const aiService = {
       const token = process.env.CLOUDFLARE_API_TOKEN;
       if (!accountId || !token) throw new Error("Cloudflare credentials missing.");
 
-      // Utilize the Private Cloudflare Edge Network for guaranteed FLUX uptime and rendering
+      // Set a strict 7-second timeout so Vercel does not kill the function at 10s
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 7000);
+
       const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-1-schnell`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
+        signal: controller.signal,
         body: JSON.stringify({ 
           prompt: imagePrompt,
           width: width,
@@ -232,12 +235,12 @@ export const aiService = {
         })
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         throw new Error(`Cloudflare Flux error: ${response.statusText}`);
       }
 
-      // Cloudflare Models periodically switch between Raw Binary streams and Encapsulated JSON payloads.
-      // We sniff the physical response header to guarantee we don't accidentally encode a JSON string as a JPEG.
       const contentType = response.headers.get("Content-Type") || "";
       let base64Image = "";
       
@@ -252,7 +255,6 @@ export const aiService = {
           return `data:image/jpeg;base64,${base64Image}`;
       } else {
           const arrayBuffer = await response.arrayBuffer();
-          // Detect if it is PNG or JPEG using magic bytes
           const isPng = arrayBuffer.byteLength > 8 && 
             new Uint8Array(arrayBuffer.slice(0, 8)).every((byte, i) => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A][i] === byte);
           const mimeType = isPng ? 'image/png' : 'image/jpeg';
@@ -268,23 +270,15 @@ export const aiService = {
       }
       
     } catch (error: any) {
-      console.error("Cloudflare FLUX Image generation failed:", error.message);
+      console.error("Cloudflare FLUX Image generation failed/timed out:", error.message);
       
-      // Secondary Fallback: Default to Pollinations AI (Turbo Model for High Availability)
+      // Secondary Fallback: Return Pollinations AI URL
+      // We do NOT fetch the buffer here to save time. The worker will download it directly.
       const seed = Math.floor(Math.random() * 1000000);
-      const encodedPrompt = encodeURIComponent(`Breathtaking photography: ${scrubbedDesc}`.slice(0, 50));
+      const encodedPrompt = encodeURIComponent(`Breathtaking photography: ${scrubbedDesc}`.slice(0, 80));
       const fallbackUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=${width}&height=${height}&nologo=true&model=turbo`;
       
-      try {
-        const pRes = await fetch(fallbackUrl);
-        if (pRes.ok) {
-           const pBuffer = await pRes.arrayBuffer();
-           return `data:image/jpeg;base64,${Buffer.from(pBuffer).toString('base64')}`;
-        }
-      } catch (pErr) {
-        console.error("Pollinations HA fallback failed too:", pErr);
-      }
-      
+      console.log("Falling back instantly to Pollinations URL:", fallbackUrl);
       return fallbackUrl;
     }
   }
