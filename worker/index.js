@@ -136,13 +136,10 @@ app.post('/compile', async (req, res) => {
         }
       }, 240000); // 4 aggressive minutes max
 
-      // To absolutely prevent ANY `image2` infinite loop freeze bugs caused by weird WebP/JPGs,
-      // we map the video onto an explicit black canvas generator that dictates the exact 15s loop timing.
       ffmpeg()
-        .input('color=c=black:s=512x896:r=2') // Primary rigid video stream
-        .inputFormat('lavfi')
-        .input(imgPath) // Overlay secondary stream
-        .input(audioPath) // Audio tertiary stream
+        .input(imgPath)
+        .inputOptions(['-loop', '1', '-framerate', '2']) // Natively loop the image at a low CPU framerate
+        .input(audioPath) 
         .outputOptions([
           '-c:v', 'libx264',
           '-preset', 'ultrafast',
@@ -151,11 +148,8 @@ app.post('/compile', async (req, res) => {
           '-c:a', 'aac',
           '-b:a', '96k',
           '-movflags', '+faststart',
-          '-shortest', // Stop stream when audio ends
-          '-t', '15',  // Maximum 15s rigidity cutoff
-          '-filter_complex', '[0:v][1:v]overlay=shortest=1[outv]',
-          '-map', '[outv]',
-          '-map', '2:a'
+          '-shortest', // Dynamically trim the infinite video loop precisely when the audio stream finishes
+          '-t', '15'   // Hard fallback cap at 15s
         ])
         .save(outputPath)
         .on('start', (cmd) => {
