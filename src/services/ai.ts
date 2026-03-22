@@ -217,9 +217,10 @@ export const aiService = {
       const token = process.env.CLOUDFLARE_API_TOKEN;
       if (!accountId || !token) throw new Error("Cloudflare credentials missing.");
 
-      // Set a strict 7-second timeout so Vercel does not kill the function at 10s
+      // Maximize Vercel Hobby limits: Allow Cloudflare exact 8.5s. 
+      // Supabase upload takes 1.0s, ensuring we finish just under 10.0s!
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 7000);
+      const timeoutId = setTimeout(() => controller.abort(), 8500);
 
       const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-1-schnell`, {
         method: 'POST',

@@ -79,8 +79,15 @@ app.post('/compile', async (req, res) => {
          contentType = imgRes.headers.get('content-type') || '';
     }
     
+    // Failsafe 3: If Pollinations is experiencing a total global outage (500s across the board), use Unsplash
     if (!imgRes.ok || contentType.includes('text/html') || contentType.includes('json')) {
-        throw new Error(`Image proxy completely failed to return a valid binary stream. (Status: ${imgRes.status})`);
+        console.warn(`[Worker] Pollinations API completely OFFLINE. Using highly-available Unsplash placeholder...`);
+        imgRes = await fetch(`https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=512&h=896&fit=crop`);
+        contentType = imgRes.headers.get('content-type') || '';
+    }
+    
+    if (!imgRes.ok || contentType.includes('text/html') || contentType.includes('json')) {
+        throw new Error(`CRITICAL: All image sources completely failed. (Status: ${imgRes.status})`);
     }
 
     // Safely determine the actual file extension to prevent FFmpeg image2 demuxer infinite loops
