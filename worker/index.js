@@ -52,7 +52,7 @@ app.post('/compile', async (req, res) => {
     const jobId = Math.random().toString(36).substring(7);
     const tmpDir = os.tmpdir();
     const audioPath = path.join(tmpDir, `final_aud_${jobId}.mp3`);
-    const imgPath = path.join(tmpDir, `img_${jobId}.jpg`);
+    let imgPath = path.join(tmpDir, `img_${jobId}.jpg`);
     const outputPath = path.join(tmpDir, `out_${jobId}.mp4`);
 
     let filesToCleanup = [];
@@ -61,6 +61,16 @@ app.post('/compile', async (req, res) => {
     // 1. Fetch Image (Assume it's always a URL from Vercel's earlier step)
     console.log(`[Worker] Step 1: Downloading image...`);
     const imgRes = await fetch(imageUrl);
+    
+    // Safely determine the actual file extension to prevent FFmpeg image2 demuxer infinite loops
+    // Pollinations AI fallbacks often serve WebP format.
+    const contentType = imgRes.headers.get('content-type') || '';
+    let ext = 'jpg';
+    if (contentType.includes('png')) ext = 'png';
+    else if (contentType.includes('webp')) ext = 'webp';
+    
+    imgPath = path.join(tmpDir, `img_${jobId}.${ext}`);
+    
     const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
     await fs.writeFile(imgPath, imgBuffer);
     filesToCleanup.push(imgPath);
@@ -87,41 +97,44 @@ app.post('/compile', async (req, res) => {
     }
 
     // 3. Render Video via FFmpeg
-    console.log(`[Worker] Step 3: Compiling video with FFmpeg... (This may take up to 15 minutes on throttled Free Tier)`);
+    console.log(`[Worker] Step 3: Compiling video with FFmpeg... (This may take up to 4 minutes)`);
     await new Promise((resolve, reject) => {
       let isDone = false;
       const timeoutId = setTimeout(() => {
         if (!isDone) {
           isDone = true;
-          reject(new Error("FFmpeg compilation timed out after 15 minutes. Heavy CPU throttling on Render Free Tier."));
+          reject(new Error("FFmpeg compiler locked. Hard timeout reached."));
         }
-      }, 900000); // 15 minutes
+      }, 240000); // 4 aggressive minutes max
 
+      // To absolutely prevent ANY `image2` infinite loop freeze bugs caused by weird WebP/JPGs,
+      // we map the video onto an explicit black canvas generator that dictates the exact 15s loop timing.
       ffmpeg()
-        .input(imgPath).inputOptions(['-loop', '1', '-t', '15']) // Force input to exactly 15s
-        .input(audioPath)
+        .input('color=c=black:s=512x896:r=2') // Primary rigid video stream
+        .inputFormat('lavfi')
+        .input(imgPath) // Overlay secondary stream
+        .input(audioPath) // Audio tertiary stream
         .outputOptions([
           '-c:v', 'libx264',
           '-preset', 'ultrafast',
-          '-tune', 'stillimage',
           '-crf', '32',
           '-pix_fmt', 'yuv420p',
-          '-r', '2',       // 2 FPS: Static images don't need high framerates. Reduces load by 15x!
           '-c:a', 'aac',
           '-b:a', '96k',
           '-movflags', '+faststart',
-          '-shortest',
-          '-t', '15',
-          // Scaling removed: the base image is already 512x896 natively
+          '-shortest', // Stop stream when audio ends
+          '-t', '15',  // Maximum 15s rigidity cutoff
+          '-filter_complex', '[0:v][1:v]overlay=shortest=1[outv]',
+          '-map', '[outv]',
+          '-map', '2:a'
         ])
         .save(outputPath)
         .on('start', (cmd) => {
-          console.log(`[Worker] FFmpeg spawned perfectly. Optimizing encode to 2 FPS.`);
+          console.log(`[Worker] Rigorous FFmpeg stream spawned.`);
         })
         .on('stderr', (stderrLine) => {
-           // Provide debug visibility if it hangs
-           if (!stderrLine.includes("frame=") && stderrLine.length > 5) {
-               console.log(`[FFmpeg] ${stderrLine}`);
+           if (stderrLine.includes("Error") || stderrLine.includes("Invalid")) {
+               console.error(`[FFmpeg Critical] ${stderrLine}`);
            }
         })
         .on('progress', (progress) => {

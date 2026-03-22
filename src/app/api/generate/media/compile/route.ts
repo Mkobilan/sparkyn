@@ -44,21 +44,41 @@ export async function POST(request: Request) {
         
         // Fire request to worker and wait for 202 Accepted.
         // Worker will compile in background and update the DB to 'media_ready'
-        const workerRes = await fetch(`${workerUrl}/compile`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                postId,
-                userId: user.id,
-                imageUrl,
-                audioUrl,
-                secretKey
-            })
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8500);
 
-        if (!workerRes.ok) {
-            const errBody = await workerRes.text();
-            throw new Error(`Worker HTTP ${workerRes.status}: ${errBody}`);
+        try {
+            const workerRes = await fetch(`${workerUrl}/compile`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    postId,
+                    userId: user.id,
+                    imageUrl,
+                    audioUrl,
+                    secretKey
+                })
+            });
+
+            clearTimeout(timeoutId);
+            
+            if (!workerRes.ok) {
+                const errBody = await workerRes.text();
+                throw new Error(`Worker HTTP ${workerRes.status}: ${errBody}`);
+            }
+        } catch (workerErr: any) {
+            clearTimeout(timeoutId);
+            if (workerErr.name === 'AbortError') {
+                console.warn("[Waterfall-Compile] Render worker response took > 8s. Node Event loop is likely CPU-starved or cold booting. Optmistically polling.");
+                // Optimistic Return: The proxy buffers the request. We assume Render will process it soon!
+                return NextResponse.json({ 
+                    success: true, 
+                    status: 'processing',
+                    message: 'Video queued successfully (CPU delayed). Please poll for media_ready.' 
+                }, { status: 202 });
+            }
+            throw workerErr;
         }
 
         // Return 202 Processing so frontend knows to poll the database
