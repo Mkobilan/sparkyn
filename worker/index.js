@@ -86,15 +86,15 @@ app.post('/compile', async (req, res) => {
     }
 
     // 3. Render Video via FFmpeg
-    console.log(`[Worker] Step 3: Compiling video with FFmpeg... (This may take up to 5 minutes on Free Tier)`);
+    console.log(`[Worker] Step 3: Compiling video with FFmpeg... (This may take up to 15 minutes on throttled Free Tier)`);
     await new Promise((resolve, reject) => {
       let isDone = false;
       const timeoutId = setTimeout(() => {
         if (!isDone) {
           isDone = true;
-          reject(new Error("FFmpeg compilation timed out after 5 minutes. CPU constraint hit on Render Free Tier."));
+          reject(new Error("FFmpeg compilation timed out after 15 minutes. Heavy CPU throttling on Render Free Tier."));
         }
-      }, 300000); // 5 minutes
+      }, 900000); // 15 minutes
 
       ffmpeg()
         .input(imgPath).inputOptions(['-loop', '1', '-t', '15']) // Force input to exactly 15s
@@ -103,9 +103,9 @@ app.post('/compile', async (req, res) => {
           '-c:v', 'libx264',
           '-preset', 'ultrafast',
           '-tune', 'stillimage',
-          '-crf', '28',
+          '-crf', '32',     // Higher compression for speed
           '-pix_fmt', 'yuv420p',
-          '-r', '30',
+          '-r', '15',       // 15 FPS (dramatically reduces CPU load by 50% compared to 30 FPS)
           '-c:a', 'aac',
           '-b:a', '96k',
           '-movflags', '+faststart',
@@ -117,7 +117,7 @@ app.post('/compile', async (req, res) => {
         ])
         .save(outputPath)
         .on('start', (cmd) => {
-          console.log(`[Worker] FFmpeg spawned internally.`);
+          console.log(`[Worker] FFmpeg spawned internally. Optimizing for 15 FPS.`);
         })
         .on('progress', (progress) => {
            if (progress.percent) {
