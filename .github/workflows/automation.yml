@@ -1,10 +1,10 @@
 name: Daily Social Automation
 
-on:
-  schedule:
-    # Run every 6 hours (adjust as needed)
-    - cron: '0 0,6,12,18 * * *'
-  workflow_dispatch: # Allow manual trigger
+# on:
+#   schedule:
+#     # Run every 6 hours (adjust as needed)
+#     - cron: '0 0,6,12,18 * * *'
+#   workflow_dispatch: # Allow manual trigger
 
 jobs:
   automate:
